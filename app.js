@@ -28,7 +28,10 @@ const lista = document.getElementById("lista");
 const totalSpan = document.getElementById("total");
 
 // 🚀 Inicio
-mostrarViajes();
+// 🚀 Inicio en blanco
+lista.innerHTML = "";
+totalSpan.textContent = "0";
+actualizarResumen(0, 0);
 
 // 🧠 Formatear nombre
 function formatearNombre(texto) {
@@ -59,7 +62,7 @@ formulario.addEventListener("submit", function(e) {
   guardar();
   mostrarViajes();
   formulario.reset();
-
+inputFecha.value = new Date().toISOString().split("T")[0];
   inputFecha.value = new Date().toISOString().split("T")[0];
 });
 
