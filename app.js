@@ -1,10 +1,10 @@
-// 📅 Fecha automática
+// 📅 Fecha automática (LOCAL CORRECTA)
 const inputFecha = document.getElementById("fecha");
 if (inputFecha) {
-  inputFecha.value = new Date().toISOString().split("T")[0];
+  inputFecha.value = new Date().toLocaleDateString('en-CA');
 }
 
-// 📅 Formatear fecha
+// 📅 Formatear fecha bonita
 function formatearFecha(fecha) {
   if (!fecha) return "Sin fecha";
 
@@ -27,11 +27,8 @@ const formulario = document.getElementById("formulario");
 const lista = document.getElementById("lista");
 const totalSpan = document.getElementById("total");
 
-// 🚀 Inicio
-// 🚀 Inicio en blanco
-lista.innerHTML = "";
-totalSpan.textContent = "0";
-actualizarResumen(0, 0);
+// 🚀 INICIO → mostrar viajes de HOY
+mostrarHoy();
 
 // 🧠 Formatear nombre
 function formatearNombre(texto) {
@@ -60,10 +57,11 @@ formulario.addEventListener("submit", function(e) {
 
   viajes.push(viaje);
   guardar();
-  mostrarViajes();
+  mostrarHoy(); // 🔥 se actualiza en tiempo real
   formulario.reset();
-inputFecha.value = new Date().toISOString().split("T")[0];
-  inputFecha.value = new Date().toISOString().split("T")[0];
+
+  // volver a poner fecha actual
+  inputFecha.value = new Date().toLocaleDateString('en-CA');
 });
 
 // 💾 Guardar
@@ -91,12 +89,48 @@ function crearItem(v, index) {
     if (confirm("¿Eliminar este viaje?")) {
       viajes.splice(index, 1);
       guardar();
-      mostrarViajes();
+      mostrarHoy();
     }
   };
 
   li.appendChild(btn);
   return li;
+}
+
+// 📅 MOSTRAR SOLO HOY (FECHA LOCAL CORRECTA)
+function mostrarHoy() {
+
+  const hoy = new Date().toLocaleDateString('en-CA');
+
+  lista.innerHTML = "";
+
+  let total = 0;
+  let pendiente = 0;
+  let totalViajes = 0;
+
+  viajesMostrados = [];
+
+  viajes.forEach((v, index) => {
+
+    if (v.fecha === hoy) {
+
+      viajesMostrados.push(v);
+      totalViajes++;
+
+      lista.appendChild(crearItem(v, index));
+
+      if (v.estado === "Pagado") total += v.precio;
+      else pendiente += v.precio;
+    }
+  });
+
+  totalSpan.textContent = total;
+  actualizarResumen(totalViajes, pendiente);
+
+  // mensaje si no hay viajes hoy
+  if (totalViajes === 0) {
+    lista.innerHTML = "<p>No hay viajes hoy</p>";
+  }
 }
 
 // 📋 Mostrar todos
@@ -151,21 +185,10 @@ function filtrarPorFecha() {
   actualizarResumen(totalViajes, pendiente);
 }
 
-// ❌ LIMPIAR FILTRO (NUEVO)
+// ❌ Limpiar filtro (regresa a HOY)
 function limpiarFiltro() {
-
-  // limpiar fecha
   document.getElementById("filtroFecha").value = "";
-
-  // limpiar lista
-  document.getElementById("lista").innerHTML = "";
-
-  // resetear total
-  document.getElementById("total").textContent = "0";
-
-  actualizarResumen(0, 0);
-
-  viajesMostrados = [];
+  mostrarHoy();
 }
 
 // 📊 Resumen
@@ -188,7 +211,7 @@ function actualizarResumen(totalViajes, pendiente) {
   deuda.textContent = `💸 Te deben: $${pendiente}`;
 }
 
-// 💾 GUARDAR SEGÚN LO QUE VES
+// 💾 Guardar historial (lo que ves)
 function guardarHistorial() {
 
   if (viajesMostrados.length === 0) {
@@ -238,4 +261,3 @@ function guardarHistorial() {
   ventana.document.close();
   ventana.print();
 }
-document.getElementById("btnLimpiar").addEventListener("click", limpiarFiltro);
