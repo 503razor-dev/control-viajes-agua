@@ -1,7 +1,16 @@
-// 📅 Fecha automática (LOCAL CORRECTA)
+// 📅 FUNCIÓN FECHA LOCAL SEGURA
+function obtenerFechaHoy() {
+  const hoy = new Date();
+  const year = hoy.getFullYear();
+  const month = String(hoy.getMonth() + 1).padStart(2, '0');
+  const day = String(hoy.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+// 📅 Fecha automática
 const inputFecha = document.getElementById("fecha");
 if (inputFecha) {
-  inputFecha.value = new Date().toLocaleDateString('en-CA');
+  inputFecha.value = obtenerFechaHoy();
 }
 
 // 📅 Formatear fecha bonita
@@ -9,11 +18,9 @@ function formatearFecha(fecha) {
   if (!fecha) return "Sin fecha";
 
   const partes = fecha.split("-");
-  if (partes.length !== 3) return fecha;
-
   const meses = [
-    "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
-    "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+    "Enero","Febrero","Marzo","Abril","Mayo","Junio",
+    "Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"
   ];
 
   return `${parseInt(partes[2])} ${meses[parseInt(partes[1]) - 1]} ${partes[0]}`;
@@ -27,41 +34,29 @@ const formulario = document.getElementById("formulario");
 const lista = document.getElementById("lista");
 const totalSpan = document.getElementById("total");
 
-// 🚀 INICIO → mostrar viajes de HOY
+// 🚀 INICIO
 mostrarHoy();
-
-// 🧠 Formatear nombre
-function formatearNombre(texto) {
-  return texto
-    .toLowerCase()
-    .trim()
-    .split(/\s+/)
-    .map(p => p.charAt(0).toUpperCase() + p.slice(1))
-    .join(" ");
-}
 
 // 📝 Guardar viaje
 formulario.addEventListener("submit", function(e) {
   e.preventDefault();
 
-  const cliente = formatearNombre(document.getElementById("cliente").value);
+  const cliente = document.getElementById("cliente").value.trim();
   const precio = parseFloat(document.getElementById("precio").value);
   const estado = document.getElementById("estado").value;
   const fecha = document.getElementById("fecha").value;
 
   if (!cliente) return alert("Ingrese un cliente");
-  if (isNaN(precio) || precio <= 0) return alert("Precio inválido");
-  if (!fecha) return alert("Seleccione fecha");
+  if (isNaN(precio)) return alert("Precio inválido");
 
   const viaje = { cliente, precio, estado, fecha };
 
   viajes.push(viaje);
   guardar();
-  mostrarHoy(); // 🔥 se actualiza en tiempo real
-  formulario.reset();
+  mostrarHoy();
 
-  // volver a poner fecha actual
-  inputFecha.value = new Date().toLocaleDateString('en-CA');
+  formulario.reset();
+  inputFecha.value = obtenerFechaHoy();
 });
 
 // 💾 Guardar
@@ -75,7 +70,7 @@ function crearItem(v, index) {
 
   li.innerHTML = `
     📅 ${formatearFecha(v.fecha)} <br>
-    👤 ${v.cliente} - 💰 $${v.precio} 
+    👤 ${v.cliente} - 💰 $${v.precio}
     <strong>(${v.estado})</strong>
   `;
 
@@ -83,24 +78,21 @@ function crearItem(v, index) {
 
   const btn = document.createElement("button");
   btn.textContent = "Eliminar";
-  btn.className = "btn-eliminar";
 
   btn.onclick = () => {
-    if (confirm("¿Eliminar este viaje?")) {
-      viajes.splice(index, 1);
-      guardar();
-      mostrarHoy();
-    }
+    viajes.splice(index, 1);
+    guardar();
+    mostrarHoy();
   };
 
   li.appendChild(btn);
   return li;
 }
 
-// 📅 MOSTRAR SOLO HOY (FECHA LOCAL CORRECTA)
+// 📅 MOSTRAR HOY
 function mostrarHoy() {
 
-  const hoy = new Date().toLocaleDateString('en-CA');
+  const hoy = obtenerFechaHoy();
 
   lista.innerHTML = "";
 
@@ -127,7 +119,6 @@ function mostrarHoy() {
   totalSpan.textContent = total;
   actualizarResumen(totalViajes, pendiente);
 
-  // mensaje si no hay viajes hoy
   if (totalViajes === 0) {
     lista.innerHTML = "<p>No hay viajes hoy</p>";
   }
@@ -137,10 +128,10 @@ function mostrarHoy() {
 function mostrarViajes() {
   lista.innerHTML = "";
 
+  viajesMostrados = [...viajes];
+
   let total = 0;
   let pendiente = 0;
-
-  viajesMostrados = [...viajes];
 
   viajes.forEach((v, index) => {
     lista.appendChild(crearItem(v, index));
@@ -153,39 +144,25 @@ function mostrarViajes() {
   actualizarResumen(viajes.length, pendiente);
 }
 
-// 🔍 Filtrar por fecha
+// 🔍 Filtrar
 function filtrarPorFecha() {
   const fechaSeleccionada = document.getElementById("filtroFecha").value;
 
-  if (!fechaSeleccionada) return alert("Selecciona una fecha");
+  if (!fechaSeleccionada) return;
 
   lista.innerHTML = "";
-
-  let total = 0;
-  let pendiente = 0;
-  let totalViajes = 0;
 
   viajesMostrados = [];
 
   viajes.forEach((v, index) => {
-
     if (v.fecha === fechaSeleccionada) {
-
       viajesMostrados.push(v);
-      totalViajes++;
-
       lista.appendChild(crearItem(v, index));
-
-      if (v.estado === "Pagado") total += v.precio;
-      else pendiente += v.precio;
     }
   });
-
-  totalSpan.textContent = total;
-  actualizarResumen(totalViajes, pendiente);
 }
 
-// ❌ Limpiar filtro (regresa a HOY)
+// ❌ Limpiar
 function limpiarFiltro() {
   document.getElementById("filtroFecha").value = "";
   mostrarHoy();
@@ -209,55 +186,4 @@ function actualizarResumen(totalViajes, pendiente) {
     totalSpan.parentElement.appendChild(deuda);
   }
   deuda.textContent = `💸 Te deben: $${pendiente}`;
-}
-
-// 💾 Guardar historial (lo que ves)
-function guardarHistorial() {
-
-  if (viajesMostrados.length === 0) {
-    alert("No hay datos para guardar");
-    return;
-  }
-
-  let contenido = `<h1>📋 Historial</h1><hr>`;
-
-  let total = 0;
-  let pendiente = 0;
-  let totalViajes = 0;
-
-  viajesMostrados.forEach(v => {
-
-    totalViajes++;
-
-    contenido += `
-      <p>
-        📅 ${formatearFecha(v.fecha)} |
-        👤 ${v.cliente} |
-        💰 $${v.precio} |
-        ${v.estado}
-      </p>
-    `;
-
-    if (v.estado === "Pagado") total += v.precio;
-    else pendiente += v.precio;
-  });
-
-  contenido += `
-    <hr>
-    <h2>💰 Total: $${total}</h2>
-    <h2>🚛 Total de viajes: ${totalViajes}</h2>
-    <h2>💸 Te deben: $${pendiente}</h2>
-  `;
-
-  let ventana = window.open("", "", "width=800,height=600");
-
-  ventana.document.write(`
-    <html>
-      <head><title>Historial</title></head>
-      <body>${contenido}</body>
-    </html>
-  `);
-
-  ventana.document.close();
-  ventana.print();
 }
