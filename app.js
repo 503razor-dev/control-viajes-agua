@@ -27,11 +27,8 @@ const formulario = document.getElementById("formulario");
 const lista = document.getElementById("lista");
 const totalSpan = document.getElementById("total");
 
-// 🚀 Inicio
-// 🚀 Inicio en blanco
-lista.innerHTML = "";
-totalSpan.textContent = "0";
-actualizarResumen(0, 0);
+// 🚀 INICIO → mostrar viajes de HOY
+mostrarHoy();
 
 // 🧠 Formatear nombre
 function formatearNombre(texto) {
@@ -60,9 +57,9 @@ formulario.addEventListener("submit", function(e) {
 
   viajes.push(viaje);
   guardar();
-  mostrarViajes();
+  mostrarHoy(); // 🔥 vuelve a mostrar HOY automáticamente
   formulario.reset();
-inputFecha.value = new Date().toISOString().split("T")[0];
+
   inputFecha.value = new Date().toISOString().split("T")[0];
 });
 
@@ -91,12 +88,43 @@ function crearItem(v, index) {
     if (confirm("¿Eliminar este viaje?")) {
       viajes.splice(index, 1);
       guardar();
-      mostrarViajes();
+      mostrarHoy();
     }
   };
 
   li.appendChild(btn);
   return li;
+}
+
+// 📅 MOSTRAR SOLO HOY
+function mostrarHoy() {
+
+  const hoy = new Date().toISOString().split("T")[0];
+
+  lista.innerHTML = "";
+
+  let total = 0;
+  let pendiente = 0;
+  let totalViajes = 0;
+
+  viajesMostrados = [];
+
+  viajes.forEach((v, index) => {
+
+    if (v.fecha === hoy) {
+
+      viajesMostrados.push(v);
+      totalViajes++;
+
+      lista.appendChild(crearItem(v, index));
+
+      if (v.estado === "Pagado") total += v.precio;
+      else pendiente += v.precio;
+    }
+  });
+
+  totalSpan.textContent = total;
+  actualizarResumen(totalViajes, pendiente);
 }
 
 // 📋 Mostrar todos
@@ -151,21 +179,10 @@ function filtrarPorFecha() {
   actualizarResumen(totalViajes, pendiente);
 }
 
-// ❌ LIMPIAR FILTRO (NUEVO)
+// ❌ Limpiar filtro
 function limpiarFiltro() {
-
-  // limpiar fecha
   document.getElementById("filtroFecha").value = "";
-
-  // limpiar lista
-  document.getElementById("lista").innerHTML = "";
-
-  // resetear total
-  document.getElementById("total").textContent = "0";
-
-  actualizarResumen(0, 0);
-
-  viajesMostrados = [];
+  mostrarHoy();
 }
 
 // 📊 Resumen
@@ -188,7 +205,7 @@ function actualizarResumen(totalViajes, pendiente) {
   deuda.textContent = `💸 Te deben: $${pendiente}`;
 }
 
-// 💾 GUARDAR SEGÚN LO QUE VES
+// 💾 Guardar historial
 function guardarHistorial() {
 
   if (viajesMostrados.length === 0) {
@@ -238,4 +255,3 @@ function guardarHistorial() {
   ventana.document.close();
   ventana.print();
 }
-document.getElementById("btnLimpiar").addEventListener("click", limpiarFiltro);
