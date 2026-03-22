@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 // 📅 Fecha automática
 const inputFecha = document.getElementById("fecha");
 if (inputFecha) {

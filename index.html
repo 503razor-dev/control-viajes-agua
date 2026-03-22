@@ -73,6 +73,7 @@
       <option value="Pendiente">Pendiente</option>
     </select>
 
+    <!-- 📅 FECHA (OBLIGATORIA) -->
     <input type="date" id="fecha" required>
 
     <button type="submit">Guardar Viaje</button>
@@ -81,11 +82,11 @@
   <!-- 🔍 FILTRO -->
   <h3>🔍 Filtrar por fecha</h3>
 
-  <input type="date" id="filtroFecha">
+<input type="date" id="filtroFecha">
 
-  <button type="button" onclick="filtrarPorFecha()">🔍 Buscar</button>
-  <button type="button" onclick="mostrarViajes()">📋 Mostrar todos</button>
-  <button type="button" id="btnLimpiar">❌ Limpiar búsqueda</button>
+<button type="button" onclick="filtrarPorFecha()">🔍 Buscar</button>
+<button type="button" onclick="mostrarViajes()">📋 Mostrar todos</button>
+<button type="button" id="btnLimpiar">❌ Limpiar búsqueda</button>
 
   <!-- 📋 HISTORIAL -->
   <h3>📋 Historial</h3>
@@ -102,4 +103,111 @@
 <script src="app.js"></script>
 
 </body>
+=======
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Control de Viajes</title>
+
+  <style>
+    body {
+      font-family: Arial;
+      background: #f4f4f4;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 400px;
+      margin: auto;
+      background: white;
+      padding: 20px;
+      border-radius: 10px;
+    }
+
+    input, select, button {
+      width: 100%;
+      padding: 10px;
+      margin-top: 10px;
+    }
+
+    h3 {
+      margin-top: 20px;
+    }
+
+    li {
+      margin-top: 5px;
+      padding: 10px;
+      border-radius: 5px;
+      list-style: none;
+    }
+
+    button {
+      background: #0077cc;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+
+    .btn-eliminar {
+      background: transparent;
+      color: #888;
+      border: none;
+      font-size: 12px;
+      margin-left: 10px;
+      cursor: pointer;
+    }
+
+    .btn-eliminar:hover {
+      color: red;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+
+  <h1>🚛 Viajes de Agua</h1>
+
+  <!-- 📝 FORMULARIO -->
+  <form id="formulario">
+    <input type="text" id="cliente" placeholder="Cliente" required>
+    <input type="number" id="precio" placeholder="Precio" required>
+
+    <select id="estado">
+      <option value="Pagado">Pagado</option>
+      <option value="Pendiente">Pendiente</option>
+    </select>
+
+    <!-- 📅 FECHA (OBLIGATORIA) -->
+    <input type="date" id="fecha" required>
+
+    <button type="submit">Guardar Viaje</button>
+  </form>
+
+  <!-- 🔍 FILTRO -->
+  <h3>🔍 Filtrar por fecha</h3>
+
+<input type="date" id="filtroFecha">
+
+<button type="button" onclick="filtrarPorFecha()">🔍 Buscar</button>
+<button type="button" onclick="mostrarViajes()">📋 Mostrar todos</button>
+<button type="button" id="btnLimpiar">❌ Limpiar búsqueda</button>
+
+  <!-- 📋 HISTORIAL -->
+  <h3>📋 Historial</h3>
+  <ul id="lista"></ul>
+
+  <!-- 💾 GUARDAR HISTORIAL -->
+  <button type="button" onclick="guardarHistorial()">💾 Guardar historial</button>
+
+  <!-- 💰 TOTALES -->
+  <h3>💰 Total: $<span id="total">0</span></h3>
+
+</div>
+
+<script src="app.js"></script>
+
+</body>
+>>>>>>> 905445ed3baf9751788f80152afeae0544fdad9a
 </html>
