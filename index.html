@@ -43,6 +43,10 @@
       cursor: pointer;
     }
 
+    button:hover {
+      opacity: 0.9;
+    }
+
     .btn-eliminar {
       background: transparent;
       color: #888;
@@ -73,7 +77,6 @@
       <option value="Pendiente">Pendiente</option>
     </select>
 
-    <!-- 📅 FECHA (OBLIGATORIA) -->
     <input type="date" id="fecha" required>
 
     <button type="submit">Guardar Viaje</button>
@@ -82,11 +85,11 @@
   <!-- 🔍 FILTRO -->
   <h3>🔍 Filtrar por fecha</h3>
 
-<input type="date" id="filtroFecha">
+  <input type="date" id="filtroFecha">
 
-<button type="button" onclick="filtrarPorFecha()">🔍 Buscar</button>
-<button type="button" onclick="mostrarViajes()">📋 Mostrar todos</button>
-<button type="button" id="btnLimpiar">❌ Limpiar búsqueda</button>
+  <button type="button" onclick="filtrarPorFecha()">🔍 Buscar</button>
+  <button type="button" onclick="mostrarViajes()">📋 Mostrar todos</button>
+  <button type="button" onclick="limpiarFiltro()">❌ Limpiar búsqueda</button>
 
   <!-- 📋 HISTORIAL -->
   <h3>📋 Historial</h3>

@@ -214,3 +214,56 @@ function actualizarResumen(totalViajes, pendiente) {
   }
   deuda.textContent = `💸 Te deben: $${pendiente}`;
 }
+// 💾 GUARDAR HISTORIAL (SEGÚN LO QUE ESTÁS VIENDO)
+function guardarHistorial() {
+
+  if (!viajesMostrados || viajesMostrados.length === 0) {
+    alert("No hay datos para guardar");
+    return;
+  }
+
+  let contenido = `<h1>📋 Historial</h1><hr>`;
+
+  let total = 0;
+  let pendiente = 0;
+  let totalViajes = 0;
+
+  viajesMostrados.forEach(v => {
+
+    totalViajes++;
+
+    contenido += `
+      <p>
+        📅 ${formatearFecha(v.fecha)} |
+        👤 ${v.cliente} |
+        💰 $${v.precio} |
+        ${v.estado}
+      </p>
+    `;
+
+    if (v.estado === "Pagado") total += v.precio;
+    else pendiente += v.precio;
+  });
+
+  contenido += `
+    <hr>
+    <h2>💰 Total: $${total}</h2>
+    <h2>🚛 Total de viajes: ${totalViajes}</h2>
+    <h2>💸 Te deben: $${pendiente}</h2>
+  `;
+
+  const ventana = window.open("", "", "width=800,height=600");
+
+  ventana.document.write(`
+    <html>
+      <head><title>Historial</title></head>
+      <body>${contenido}</body>
+    </html>
+  `);
+
+  ventana.document.close();
+
+  setTimeout(() => {
+    ventana.print();
+  }, 500);
+}
