@@ -146,20 +146,47 @@ function mostrarViajes() {
 
 // 🔍 Filtrar
 function filtrarPorFecha() {
+
   const fechaSeleccionada = document.getElementById("filtroFecha").value;
 
-  if (!fechaSeleccionada) return;
+  if (!fechaSeleccionada) {
+    alert("Selecciona una fecha");
+    return;
+  }
 
   lista.innerHTML = "";
+
+  let total = 0;
+  let pendiente = 0;
+  let totalViajes = 0;
 
   viajesMostrados = [];
 
   viajes.forEach((v, index) => {
+
     if (v.fecha === fechaSeleccionada) {
+
       viajesMostrados.push(v);
+      totalViajes++;
+
       lista.appendChild(crearItem(v, index));
+
+      if (v.estado === "Pagado") {
+        total += v.precio;
+      } else {
+        pendiente += v.precio;
+      }
     }
   });
+
+  // 🔥 ACTUALIZAR TOTALES CORRECTOS
+  totalSpan.textContent = total;
+  actualizarResumen(totalViajes, pendiente);
+
+  // mensaje si no hay resultados
+  if (totalViajes === 0) {
+    lista.innerHTML = "<p>No hay viajes en esa fecha</p>";
+  }
 }
 
 // ❌ Limpiar
