@@ -222,30 +222,23 @@ function guardarHistorial() {
     return;
   }
 
-  // 📅 Fecha para el nombre del archivo
-  const hoy = new Date();
-  const meses = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
-  const nombreArchivo = `${hoy.getDate()}-${meses[hoy.getMonth()]}-${hoy.getFullYear()}`;
+  let contenido = `<h1>📋 Historial</h1><hr>`;
 
   let total = 0;
   let pendiente = 0;
-  let totalViajes = viajesMostrados.length;
-
-  let contenido = `
-    <h2>📋 Historial</h2>
-    <p><strong>${nombreArchivo}</strong></p>
-    <hr>
-  `;
+  let totalViajes = 0;
 
   viajesMostrados.forEach(v => {
 
+    totalViajes++;
+
     contenido += `
-      <div style="display:flex; justify-content:space-between; border-bottom:1px solid #ccc; padding:5px 0;">
-        <span>📅 ${formatearFecha(v.fecha)}</span>
-        <span>👤 ${v.cliente}</span>
-        <span>💰 $${v.precio}</span>
-        <span>${v.estado}</span>
-      </div>
+      <p>
+        📅 ${formatearFecha(v.fecha)} |
+        👤 ${v.cliente} |
+        💰 $${v.precio} |
+        ${v.estado}
+      </p>
     `;
 
     if (v.estado === "Pagado") total += v.precio;
@@ -254,33 +247,23 @@ function guardarHistorial() {
 
   contenido += `
     <hr>
-    <h3>💰 Total: $${total}</h3>
-    <h3>🚛 Total de viajes: ${totalViajes}</h3>
-    <h3>💸 Te deben: $${pendiente}</h3>
+    <h2>💰 Total: $${total}</h2>
+    <h2>🚛 Total de viajes: ${totalViajes}</h2>
+    <h2>💸 Te deben: $${pendiente}</h2>
   `;
 
   const ventana = window.open("", "", "width=800,height=600");
 
   ventana.document.write(`
     <html>
-      <head>
-        <title>${nombreArchivo}</title>
-        <style>
-          body { font-family: Arial; padding: 20px; }
-          h2, h3 { margin: 10px 0; }
-        </style>
-      </head>
-      <body>
-        ${contenido}
-      </body>
+      <head><title>Historial</title></head>
+      <body>${contenido}</body>
     </html>
   `);
 
   ventana.document.close();
 
-  // ⏳ Espera y abre impresión (para guardar PDF)
   setTimeout(() => {
-    ventana.document.title = nombreArchivo; // 👉 nombre del archivo
     ventana.print();
   }, 500);
 }
