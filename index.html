@@ -2,13 +2,15 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Control de Viajes</title>
 
   <style>
     body {
-      font-family: Arial;
+      font-family: Arial, sans-serif;
       background: #f4f4f4;
       padding: 20px;
+      margin: 0;
     }
 
     .container {
@@ -17,23 +19,27 @@
       background: white;
       padding: 20px;
       border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.08);
     }
 
     input, select, button {
       width: 100%;
       padding: 10px;
       margin-top: 10px;
+      box-sizing: border-box;
+      font-size: 14px;
     }
 
-    h3 {
-      margin-top: 20px;
+    h1, h3 {
+      margin-bottom: 10px;
     }
 
     li {
-      margin-top: 5px;
+      margin-top: 8px;
       padding: 10px;
       border-radius: 5px;
       list-style: none;
+      line-height: 1.5;
     }
 
     button {
@@ -41,6 +47,7 @@
       color: white;
       border: none;
       cursor: pointer;
+      border-radius: 5px;
     }
 
     button:hover {
@@ -48,16 +55,32 @@
     }
 
     .btn-eliminar {
-      background: transparent;
-      color: #888;
+      background: #dc3545;
+      color: white;
       border: none;
       font-size: 12px;
-      margin-left: 10px;
+      padding: 6px 10px;
+      margin-top: 8px;
+      width: auto;
+      border-radius: 5px;
       cursor: pointer;
     }
 
     .btn-eliminar:hover {
-      color: red;
+      background: #b02a37;
+    }
+
+    #lista {
+      padding-left: 0;
+    }
+
+    .mensaje-vacio {
+      background: #f8f9fa;
+      padding: 12px;
+      border-radius: 5px;
+      color: #555;
+      text-align: center;
+      margin-top: 10px;
     }
   </style>
 </head>
@@ -67,7 +90,6 @@
 
   <h1>🚛 Viajes de Agua</h1>
 
-  <!-- 📝 FORMULARIO -->
   <form id="formulario">
     <input type="text" id="cliente" placeholder="Cliente" required>
     <input type="number" id="precio" placeholder="Precio" required>
@@ -82,28 +104,24 @@
     <button type="submit">Guardar Viaje</button>
   </form>
 
-  <!-- 🔍 FILTRO -->
-  <h3>🔍 Filtrar por fecha</h3>
+  <h3>🔍 Filtrar búsquedas</h3>
 
   <input type="date" id="filtroFecha">
+  <input type="month" id="filtroMes">
 
-  <button type="button" onclick="filtrarPorFecha()">🔍 Buscar</button>
+  <button type="button" onclick="filtrar()">🔍 Buscar</button>
   <button type="button" onclick="mostrarViajes()">📋 Mostrar todos</button>
   <button type="button" onclick="limpiarFiltro()">❌ Limpiar búsqueda</button>
 
-  <!-- 📋 HISTORIAL -->
   <h3>📋 Historial</h3>
   <ul id="lista"></ul>
 
-  <!-- 💾 GUARDAR HISTORIAL -->
   <button type="button" onclick="guardarHistorial()">💾 Guardar historial</button>
 
-  <!-- 💰 TOTALES -->
   <h3>💰 Total: $<span id="total">0</span></h3>
 
 </div>
 
 <script src="app.js"></script>
-
 </body>
 </html>
