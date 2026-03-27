@@ -2,8 +2,8 @@
 function obtenerFechaHoy() {
   const hoy = new Date();
   const year = hoy.getFullYear();
-  const month = String(hoy.getMonth() + 1).padStart(2, '0');
-  const day = String(hoy.getDate()).padStart(2, '0');
+  const month = String(hoy.getMonth() + 1).padStart(2, "0");
+  const day = String(hoy.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 }
 
@@ -17,22 +17,33 @@ function formatearFecha(fecha) {
     "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
   ];
 
-  return `${parseInt(partes[2])} ${meses[parseInt(partes[1]) - 1]} ${partes[0]}`;
+  return `${parseInt(partes[2], 10)} ${meses[parseInt(partes[1], 10) - 1]} ${partes[0]}`;
 }
 
-// 🔠 Primera letra mayúscula en cada palabra
+// 🔠 Poner mayúscula en cada palabra
 function capitalizarTexto(texto) {
   return texto
     .toLowerCase()
-    .split(" ")
-    .filter(p => p.trim() !== "")
-    .map(p => p.charAt(0).toUpperCase() + p.slice(1))
+    .trim()
+    .split(/\s+/)
+    .filter(p => p !== "")
+    .map(palabra => palabra.charAt(0).toUpperCase() + palabra.slice(1))
     .join(" ");
+}
+
+// 📄 Mes en texto
+function obtenerNombreMes(numeroMes) {
+  const meses = [
+    "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+    "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+  ];
+  return meses[parseInt(numeroMes, 10) - 1];
 }
 
 // 📦 Datos
 let viajes = JSON.parse(localStorage.getItem("viajes")) || [];
 let viajesMostrados = [];
+let modoVista = "hoy"; // hoy | fecha | mes | todo
 
 const formulario = document.getElementById("formulario");
 const lista = document.getElementById("lista");
@@ -46,43 +57,42 @@ if (inputFecha) {
   inputFecha.value = obtenerFechaHoy();
 }
 
-// 🚀 INICIO
-mostrarHoy();
-
-// 📝 Guardar viaje
-formulario.addEventListener("submit", function (e) {
-  e.preventDefault();
-
-  const cliente = capitalizarTexto(document.getElementById("cliente").value.trim());
-  const precio = parseFloat(document.getElementById("precio").value);
-  const estado = document.getElementById("estado").value;
-  const fecha = document.getElementById("fecha").value;
-
-  if (!cliente) {
-    alert("Ingrese un cliente");
-    return;
+// 📄 Nombre para historial según vista
+function obtenerNombreHistorial() {
+  if (modoVista === "todo") {
+    return "Historial_Completo";
   }
 
-  if (isNaN(precio)) {
-    alert("Precio inválido");
-    return;
+  if (modoVista === "fecha" && filtroFecha.value) {
+    const [year, month, day] = filtroFecha.value.split("-");
+    return `${parseInt(day, 10)}_${obtenerNombreMes(month)}_${year}`;
   }
 
-  const viaje = {
-    id: Date.now(),
-    cliente,
-    precio,
-    estado,
-    fecha
-  };
+  if (modoVista === "mes" && filtroMes.value) {
+    const [year, month] = filtroMes.value.split("-");
+    return `${obtenerNombreMes(month)}_${year}`;
+  }
 
-  viajes.push(viaje);
-  guardar();
-  mostrarHoy();
+  return "Historial_Hoy";
+}
 
-  formulario.reset();
-  inputFecha.value = obtenerFechaHoy();
-});
+// 🧾 Título según vista
+function obtenerTituloHistorial() {
+  if (modoVista === "todo") {
+    return "📋 Historial Completo";
+  }
+
+  if (modoVista === "fecha" && filtroFecha.value) {
+    return `📋 Historial - ${formatearFecha(filtroFecha.value)}`;
+  }
+
+  if (modoVista === "mes" && filtroMes.value) {
+    const [year, month] = filtroMes.value.split("-");
+    return `📋 Historial - ${obtenerNombreMes(month)} ${year}`;
+  }
+
+  return `📋 Historial - ${formatearFecha(obtenerFechaHoy())}`;
+}
 
 // 💾 Guardar en localStorage
 function guardar() {
@@ -95,7 +105,7 @@ function crearItem(v) {
 
   li.innerHTML = `
     📅 ${formatearFecha(v.fecha)} <br>
-    👤 ${v.cliente} - 💰 $${v.precio}
+    👤 ${v.cliente} - 💰 $${Number(v.precio).toFixed(2)}
     <strong>(${v.estado})</strong>
   `;
 
@@ -112,10 +122,12 @@ function crearItem(v) {
     viajes = viajes.filter(viaje => viaje.id !== v.id);
     guardar();
 
-    if (filtroFecha && filtroFecha.value) {
+    if (modoVista === "fecha" && filtroFecha.value) {
       filtrarPorFecha();
-    } else if (filtroMes && filtroMes.value) {
+    } else if (modoVista === "mes" && filtroMes.value) {
       filtrarPorMes();
+    } else if (modoVista === "todo") {
+      mostrarViajes();
     } else {
       mostrarHoy();
     }
@@ -143,15 +155,56 @@ function actualizarResumen(totalViajes, pendiente) {
     deuda.id = "deuda";
     totalSpan.parentElement.appendChild(deuda);
   }
-  deuda.textContent = `💸 Te deben: $${pendiente}`;
+  deuda.textContent = `💸 Te deben: $${pendiente.toFixed(2)}`;
 }
+
+// 📝 Guardar viaje
+formulario.addEventListener("submit", function (e) {
+  e.preventDefault();
+
+  const cliente = capitalizarTexto(document.getElementById("cliente").value);
+  const precio = parseFloat(document.getElementById("precio").value);
+  const estado = document.getElementById("estado").value;
+  const fecha = document.getElementById("fecha").value;
+
+  if (!cliente) {
+    alert("Ingrese un cliente");
+    return;
+  }
+
+  if (isNaN(precio)) {
+    alert("Precio inválido");
+    return;
+  }
+
+  if (!fecha) {
+    alert("Seleccione una fecha");
+    return;
+  }
+
+  const viaje = {
+    id: Date.now(),
+    cliente,
+    precio,
+    estado,
+    fecha
+  };
+
+  viajes.push(viaje);
+  guardar();
+
+  // Después de guardar, vuelve a la vista de hoy
+  formulario.reset();
+  inputFecha.value = obtenerFechaHoy();
+  mostrarHoy();
+});
 
 // 📅 Mostrar solo hoy
 function mostrarHoy() {
-  const hoy = obtenerFechaHoy();
-
+  modoVista = "hoy";
   lista.innerHTML = "";
 
+  const hoy = obtenerFechaHoy();
   let total = 0;
   let pendiente = 0;
   let totalViajes = 0;
@@ -162,27 +215,29 @@ function mostrarHoy() {
     if (v.fecha === hoy) {
       viajesMostrados.push(v);
       totalViajes++;
-
       lista.appendChild(crearItem(v));
 
       if (v.estado === "Pagado") {
-        total += v.precio;
+        total += Number(v.precio);
       } else {
-        pendiente += v.precio;
+        pendiente += Number(v.precio);
       }
     }
   });
 
-  totalSpan.textContent = total;
+  totalSpan.textContent = total.toFixed(2);
   actualizarResumen(totalViajes, pendiente);
 
   if (totalViajes === 0) {
-    lista.innerHTML = "<p>No hay viajes hoy</p>";
+    lista.innerHTML = '<div class="mensaje-vacio">No hay viajes hoy</div>';
   }
 }
 
 // 📋 Mostrar todos
 function mostrarViajes() {
+  modoVista = "todo";
+  filtroFecha.value = "";
+  filtroMes.value = "";
   lista.innerHTML = "";
 
   viajesMostrados = [...viajes];
@@ -194,29 +249,30 @@ function mostrarViajes() {
     lista.appendChild(crearItem(v));
 
     if (v.estado === "Pagado") {
-      total += v.precio;
+      total += Number(v.precio);
     } else {
-      pendiente += v.precio;
+      pendiente += Number(v.precio);
     }
   });
 
-  totalSpan.textContent = total;
+  totalSpan.textContent = total.toFixed(2);
   actualizarResumen(viajes.length, pendiente);
 
   if (viajes.length === 0) {
-    lista.innerHTML = "<p>No hay viajes guardados</p>";
+    lista.innerHTML = '<div class="mensaje-vacio">No hay viajes guardados</div>';
   }
 }
 
 // 🔍 Filtrar por fecha
 function filtrarPorFecha() {
-  const fechaSeleccionada = document.getElementById("filtroFecha").value;
+  const fechaSeleccionada = filtroFecha.value;
 
   if (!fechaSeleccionada) {
     alert("Selecciona una fecha");
     return;
   }
 
+  modoVista = "fecha";
   lista.innerHTML = "";
 
   let total = 0;
@@ -229,34 +285,34 @@ function filtrarPorFecha() {
     if (v.fecha === fechaSeleccionada) {
       viajesMostrados.push(v);
       totalViajes++;
-
       lista.appendChild(crearItem(v));
 
       if (v.estado === "Pagado") {
-        total += v.precio;
+        total += Number(v.precio);
       } else {
-        pendiente += v.precio;
+        pendiente += Number(v.precio);
       }
     }
   });
 
-  totalSpan.textContent = total;
+  totalSpan.textContent = total.toFixed(2);
   actualizarResumen(totalViajes, pendiente);
 
   if (totalViajes === 0) {
-    lista.innerHTML = "<p>No hay viajes en esa fecha</p>";
+    lista.innerHTML = '<div class="mensaje-vacio">No hay viajes en esa fecha</div>';
   }
 }
 
 // 📅 Filtrar por mes
 function filtrarPorMes() {
-  const mesSeleccionado = document.getElementById("filtroMes").value;
+  const mesSeleccionado = filtroMes.value;
 
   if (!mesSeleccionado) {
     alert("Selecciona un mes");
     return;
   }
 
+  modoVista = "mes";
   lista.innerHTML = "";
 
   let total = 0;
@@ -269,29 +325,28 @@ function filtrarPorMes() {
     if (v.fecha && v.fecha.startsWith(mesSeleccionado)) {
       viajesMostrados.push(v);
       totalViajes++;
-
       lista.appendChild(crearItem(v));
 
       if (v.estado === "Pagado") {
-        total += v.precio;
+        total += Number(v.precio);
       } else {
-        pendiente += v.precio;
+        pendiente += Number(v.precio);
       }
     }
   });
 
-  totalSpan.textContent = total;
+  totalSpan.textContent = total.toFixed(2);
   actualizarResumen(totalViajes, pendiente);
 
   if (totalViajes === 0) {
-    lista.innerHTML = "<p>No hay viajes en ese mes</p>";
+    lista.innerHTML = '<div class="mensaje-vacio">No hay viajes en ese mes</div>';
   }
 }
 
-// 🔍 Filtro inteligente: un solo botón
+// 🔍 Filtro inteligente
 function filtrar() {
-  const fecha = document.getElementById("filtroFecha").value;
-  const mes = document.getElementById("filtroMes").value;
+  const fecha = filtroFecha.value;
+  const mes = filtroMes.value;
 
   if (fecha) {
     filtrarPorFecha();
@@ -308,8 +363,8 @@ function filtrar() {
 
 // ❌ Limpiar búsqueda
 function limpiarFiltro() {
-  document.getElementById("filtroFecha").value = "";
-  document.getElementById("filtroMes").value = "";
+  filtroFecha.value = "";
+  filtroMes.value = "";
   mostrarHoy();
 }
 
@@ -330,74 +385,142 @@ if (filtroMes) {
   });
 }
 
-// 💾 Guardar historial según lo que estás viendo
+// 💾 Guardar historial
 function guardarHistorial() {
   if (!viajesMostrados || viajesMostrados.length === 0) {
     alert("No hay datos para guardar");
     return;
   }
 
-  let contenido = `<h1>📋 Historial</h1><hr>`;
-
   let total = 0;
   let pendiente = 0;
   let totalViajes = 0;
 
+  const tituloHistorial = obtenerTituloHistorial();
+  const nombreHistorial = obtenerNombreHistorial();
+
+  let contenido = `
+    <div class="hoja">
+      <h1>${tituloHistorial}</h1>
+      <hr>
+  `;
+
   viajesMostrados.forEach(v => {
     totalViajes++;
+    const precio = Number(v.precio);
 
     contenido += `
       <p>
         📅 ${formatearFecha(v.fecha)} |
         👤 ${v.cliente} |
-        💰 $${v.precio} |
+        💰 $${precio.toFixed(2)} |
         ${v.estado}
       </p>
     `;
 
     if (v.estado === "Pagado") {
-      total += v.precio;
+      total += precio;
     } else {
-      pendiente += v.precio;
+      pendiente += precio;
     }
   });
 
   contenido += `
-    <hr>
-    <h2>💰 Total: $${total}</h2>
-    <h2>🚛 Total de viajes: ${totalViajes}</h2>
-    <h2>💸 Te deben: $${pendiente}</h2>
+      <hr>
+      <h2>💰 Total: $${total.toFixed(2)}</h2>
+      <h2>🚚 Total de viajes: ${totalViajes}</h2>
+      <h2>💸 Te deben: $${pendiente.toFixed(2)}</h2>
+    </div>
   `;
 
-  const ventana = window.open("", "", "width=800,height=600");
+  const ventana = window.open("", "_blank");
+
+  if (!ventana) {
+    alert("El navegador bloqueó la ventana emergente.");
+    return;
+  }
 
   ventana.document.write(`
     <html>
       <head>
-        <title>Historial</title>
+        <title>${nombreHistorial}</title>
+        <meta charset="UTF-8">
         <style>
           body {
-            font-family: Arial, sans-serif;
-            padding: 20px;
+            margin: 0;
+            padding: 40px 0;
+            background: #dcdcdc;
+            font-family: "Times New Roman", serif;
           }
-          h1, h2 {
-            margin-bottom: 10px;
+
+          .hoja {
+            width: 80%;
+            max-width: 900px;
+            min-height: 1000px;
+            margin: 0 auto;
+            background: white;
+            padding: 40px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.25);
+            box-sizing: border-box;
           }
+
+          h1 {
+            font-size: 28px;
+            margin: 0 0 20px 0;
+            font-weight: bold;
+          }
+
+          h2 {
+            font-size: 22px;
+            margin: 18px 0;
+            font-weight: bold;
+          }
+
           p {
-            margin: 8px 0;
+            font-size: 18px;
+            margin: 12px 0;
+            line-height: 1.6;
           }
+
           hr {
-            margin: 20px 0;
+            border: none;
+            border-top: 1px solid #999;
+            margin: 18px 0;
+          }
+
+          @media print {
+            body {
+              background: white;
+              padding: 0;
+            }
+
+            .hoja {
+              width: 100%;
+              max-width: 100%;
+              min-height: auto;
+              box-shadow: none;
+              margin: 0;
+              padding: 30px;
+            }
           }
         </style>
       </head>
-      <body>${contenido}</body>
+      <body>
+        ${contenido}
+        <script>
+          document.title = "${nombreHistorial}";
+        <\/script>
+      </body>
     </html>
   `);
 
   ventana.document.close();
 
   setTimeout(() => {
+    ventana.focus();
     ventana.print();
   }, 500);
 }
+
+// 🚀 INICIO
+mostrarHoy();

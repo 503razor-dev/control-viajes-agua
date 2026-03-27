@@ -86,42 +86,42 @@
 </head>
 <body>
 
-<div class="container">
+  <div class="container">
 
-  <h1>🚛 Viajes de Agua</h1>
+    <h1>🚛 Viajes de Agua</h1>
 
-  <form id="formulario">
-    <input type="text" id="cliente" placeholder="Cliente" required>
-    <input type="number" id="precio" placeholder="Precio" required>
+    <form id="formulario">
+      <input type="text" id="cliente" placeholder="Cliente" required>
+      <input type="number" id="precio" placeholder="Precio" required>
 
-    <select id="estado">
-      <option value="Pagado">Pagado</option>
-      <option value="Pendiente">Pendiente</option>
-    </select>
+      <select id="estado">
+        <option value="Pagado">Pagado</option>
+        <option value="Pendiente">Pendiente</option>
+      </select>
 
-    <input type="date" id="fecha" required>
+      <input type="date" id="fecha" required>
 
-    <button type="submit">Guardar Viaje</button>
-  </form>
+      <button type="submit">Guardar Viaje</button>
+    </form>
 
-  <h3>🔍 Filtrar búsquedas</h3>
+    <h3>🔍 Filtrar búsquedas</h3>
 
-  <input type="date" id="filtroFecha">
-  <input type="month" id="filtroMes">
+    <input type="date" id="filtroFecha">
+    <input type="month" id="filtroMes">
 
-  <button type="button" onclick="filtrar()">🔍 Buscar</button>
-  <button type="button" onclick="mostrarViajes()">📋 Mostrar todos</button>
-  <button type="button" onclick="limpiarFiltro()">❌ Limpiar búsqueda</button>
+    <button type="button" onclick="filtrar()">🔍 Buscar</button>
+    <button type="button" onclick="mostrarViajes()">📋 Mostrar todos</button>
+    <button type="button" onclick="limpiarFiltro()">❌ Limpiar búsqueda</button>
 
-  <h3>📋 Historial</h3>
-  <ul id="lista"></ul>
+    <h3>📋 Historial</h3>
+    <ul id="lista"></ul>
 
-  <button type="button" onclick="guardarHistorial()">💾 Guardar historial</button>
+    <button type="button" onclick="guardarHistorial()">💾 Guardar historial</button>
 
-  <h3>💰 Total: $<span id="total">0</span></h3>
+    <h3>💰 Total: $<span id="total">0</span></h3>
 
-</div>
+  </div>
 
-<script src="app.js"></script>
+  <script src="app.js"></script>
 </body>
 </html>
