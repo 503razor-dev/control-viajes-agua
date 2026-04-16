@@ -52,9 +52,48 @@ const inputFecha = document.getElementById("fecha");
 const filtroFecha = document.getElementById("filtroFecha");
 const filtroMes = document.getElementById("filtroMes");
 
+// ✅ Nuevos elementos visuales para cambio
+const inputPrecio = document.getElementById("precio");
+const inputPagaCon = document.getElementById("pagaCon");
+const cambioVisual = document.getElementById("cambioVisual");
+
 // 📅 Fecha automática
 if (inputFecha) {
   inputFecha.value = obtenerFechaHoy();
+}
+
+// 💵 Calcular cambio solo visual
+function actualizarCambioVisual() {
+  const precio = parseFloat(inputPrecio.value);
+  const pagaCon = parseFloat(inputPagaCon.value);
+
+  if (isNaN(precio) || isNaN(pagaCon)) {
+    cambioVisual.textContent = "💵 Cambio: $0.00";
+    return;
+  }
+
+  const diferencia = pagaCon - precio;
+
+  if (diferencia >= 0) {
+    cambioVisual.textContent = `💵 Cambio: $${diferencia.toFixed(2)}`;
+  } else {
+    cambioVisual.textContent = `💸 Faltan: $${Math.abs(diferencia).toFixed(2)}`;
+  }
+}
+
+// 🔄 Resetear visual del cambio
+function resetearCambioVisual() {
+  if (inputPagaCon) inputPagaCon.value = "";
+  if (cambioVisual) cambioVisual.textContent = "💵 Cambio: $0.00";
+}
+
+// Eventos para cálculo visual
+if (inputPrecio) {
+  inputPrecio.addEventListener("input", actualizarCambioVisual);
+}
+
+if (inputPagaCon) {
+  inputPagaCon.addEventListener("input", actualizarCambioVisual);
 }
 
 // 📄 Nombre para historial según vista
@@ -196,6 +235,7 @@ formulario.addEventListener("submit", function (e) {
   // Después de guardar, vuelve a la vista de hoy
   formulario.reset();
   inputFecha.value = obtenerFechaHoy();
+  resetearCambioVisual();
   mostrarHoy();
 });
 
@@ -524,3 +564,4 @@ function guardarHistorial() {
 
 // 🚀 INICIO
 mostrarHoy();
+resetearCambioVisual();

@@ -82,6 +82,15 @@
       text-align: center;
       margin-top: 10px;
     }
+
+    .cambio-visual {
+      margin-top: 10px;
+      padding: 10px;
+      border-radius: 5px;
+      background: #f8f9fa;
+      font-weight: bold;
+      color: #333;
+    }
   </style>
 </head>
 <body>
@@ -91,18 +100,24 @@
     <h1>🚛 Viajes de Agua</h1>
 
     <form id="formulario">
-      <input type="text" id="cliente" placeholder="Cliente" required>
-      <input type="number" id="precio" placeholder="Precio" required>
+  <input type="text" id="cliente" placeholder="Cliente" required>
 
-      <select id="estado">
-        <option value="Pagado">Pagado</option>
-        <option value="Pendiente">Pendiente</option>
-      </select>
+  <input type="number" id="precio" placeholder="Precio" required>
 
-      <input type="date" id="fecha" required>
+  <!-- 👇 AHORA VA AQUÍ -->
+  <input type="number" id="pagaCon" placeholder="Paga con (opcional)" min="0" step="0.01">
 
-      <button type="submit">Guardar Viaje</button>
-    </form>
+  <select id="estado">
+    <option value="Pagado">Pagado</option>
+    <option value="Pendiente">Pendiente</option>
+  </select>
+
+  <div id="cambioVisual" class="cambio-visual">💵 Cambio: $0.00</div>
+
+  <input type="date" id="fecha" required>
+
+  <button type="submit">Guardar Viaje</button>
+</form>
 
     <h3>🔍 Filtrar búsquedas</h3>
 
