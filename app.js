@@ -60,7 +60,7 @@ function obtenerNombreMes(numeroMes) {
 // 📦 Datos
 let viajes = JSON.parse(localStorage.getItem("viajes")) || [];
 let viajesMostrados = [];
-let modoVista = "hoy"; // hoy | fecha | mes | rango | todo
+let modoVista = "hoy"; // hoy | fecha | mes | rango | todo | mejorDia
 
 const formulario = document.getElementById("formulario");
 const lista = document.getElementById("lista");
@@ -71,7 +71,7 @@ const filtroMes = document.getElementById("filtroMes");
 const filtroFechaInicio = document.getElementById("filtroFechaInicio");
 const filtroFechaFin = document.getElementById("filtroFechaFin");
 
-// ✅ Nuevos elementos visuales para cambio
+// ✅ Elementos visuales para cambio
 const inputPrecio = document.getElementById("precio");
 const inputPagaCon = document.getElementById("pagaCon");
 const cambioVisual = document.getElementById("cambioVisual");
@@ -125,6 +125,10 @@ function obtenerNombreHistorial() {
     return formatearFechaParaNombre(filtroFecha.value);
   }
 
+  if (modoVista === "mejorDia" && filtroFecha.value) {
+    return `${formatearFechaParaNombre(filtroFecha.value)}_Mejor_Dia`;
+  }
+
   if (modoVista === "mes" && filtroMes.value) {
     const [year, month] = filtroMes.value.split("-");
     return `${obtenerNombreMes(month)}_${year}`;
@@ -145,6 +149,10 @@ function obtenerTituloHistorial() {
 
   if (modoVista === "fecha" && filtroFecha.value) {
     return `📋 Historial - ${formatearFecha(filtroFecha.value)}`;
+  }
+
+  if (modoVista === "mejorDia" && filtroFecha.value) {
+    return `📋 Historial - ${formatearFecha(filtroFecha.value)} (Mejor Dia)`;
   }
 
   if (modoVista === "mes" && filtroMes.value) {
@@ -188,7 +196,9 @@ function crearItem(v, numero) {
     viajes = viajes.filter(viaje => viaje.id !== v.id);
     guardar();
 
-    if (modoVista === "fecha" && filtroFecha.value) {
+    if (modoVista === "mejorDia" && filtroFecha.value) {
+      buscarMejorDia();
+    } else if (modoVista === "fecha" && filtroFecha.value) {
       filtrarPorFecha();
     } else if (modoVista === "mes" && filtroMes.value) {
       filtrarPorMes();
@@ -267,6 +277,55 @@ formulario.addEventListener("submit", function (e) {
   mostrarHoy();
 });
 
+// 🏆 Buscar automáticamente el mejor día
+function buscarMejorDia() {
+  if (!viajes || viajes.length === 0) {
+    alert("No hay viajes guardados");
+    return;
+  }
+
+  const conteoPorFecha = {};
+
+  viajes.forEach(v => {
+    if (!v.fecha) return;
+
+    if (!conteoPorFecha[v.fecha]) {
+      conteoPorFecha[v.fecha] = 0;
+    }
+
+    conteoPorFecha[v.fecha]++;
+  });
+
+  const fechas = Object.keys(conteoPorFecha);
+
+  if (fechas.length === 0) {
+    alert("No hay fechas válidas registradas");
+    return;
+  }
+
+  let mejorFecha = fechas[0];
+  let mayorCantidad = conteoPorFecha[mejorFecha];
+
+  fechas.forEach(fecha => {
+    const cantidad = conteoPorFecha[fecha];
+
+    if (cantidad > mayorCantidad) {
+      mayorCantidad = cantidad;
+      mejorFecha = fecha;
+    } else if (cantidad === mayorCantidad && fecha > mejorFecha) {
+      mejorFecha = fecha;
+    }
+  });
+
+  filtroFecha.value = mejorFecha;
+  filtroMes.value = "";
+  filtroFechaInicio.value = "";
+  filtroFechaFin.value = "";
+
+  filtrarPorFecha();
+  modoVista = "mejorDia";
+}
+
 // 📅 Mostrar solo hoy
 function mostrarHoy() {
   modoVista = "hoy";
@@ -279,7 +338,7 @@ function mostrarHoy() {
 
   viajesMostrados = [];
 
-  viajes.forEach((v, index) => {
+  viajes.forEach((v) => {
     if (v.fecha === hoy) {
       viajesMostrados.push(v);
       totalViajes++;
