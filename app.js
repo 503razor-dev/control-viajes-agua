@@ -70,6 +70,7 @@ const filtroFecha = document.getElementById("filtroFecha");
 const filtroMes = document.getElementById("filtroMes");
 const filtroFechaInicio = document.getElementById("filtroFechaInicio");
 const filtroFechaFin = document.getElementById("filtroFechaFin");
+const tipoMejorDia = document.getElementById("tipoMejorDia");
 
 // ✅ Elementos visuales para cambio
 const inputPrecio = document.getElementById("precio");
@@ -117,6 +118,8 @@ if (inputPagaCon) {
 
 // 📄 Nombre para historial según vista
 function obtenerNombreHistorial() {
+  const tipo = tipoMejorDia ? tipoMejorDia.value : "";
+
   if (modoVista === "todo") {
     return "Historial_Completo";
   }
@@ -126,7 +129,15 @@ function obtenerNombreHistorial() {
   }
 
   if (modoVista === "mejorDia" && filtroFecha.value) {
-    return `${formatearFechaParaNombre(filtroFecha.value)}_Mejor_Dia`;
+    let tipoTexto = "";
+
+    if (tipo === "dinero") {
+      tipoTexto = "[Mas Dinero]";
+    } else if (tipo === "viajes") {
+      tipoTexto = "[Mas Viajes]";
+    }
+
+    return `${formatearFechaParaNombre(filtroFecha.value)}_Mejor_Dia${tipoTexto}`;
   }
 
   if (modoVista === "mes" && filtroMes.value) {
@@ -143,6 +154,8 @@ function obtenerNombreHistorial() {
 
 // 🧾 Título según vista
 function obtenerTituloHistorial() {
+  const tipo = tipoMejorDia ? tipoMejorDia.value : "";
+
   if (modoVista === "todo") {
     return "📋 Historial Completo";
   }
@@ -152,7 +165,15 @@ function obtenerTituloHistorial() {
   }
 
   if (modoVista === "mejorDia" && filtroFecha.value) {
-    return `📋 Historial - ${formatearFecha(filtroFecha.value)} (Mejor Dia)`;
+    let tipoTexto = "";
+
+    if (tipo === "dinero") {
+      tipoTexto = "[Mas Dinero]";
+    } else if (tipo === "viajes") {
+      tipoTexto = "[Mas Viajes]";
+    }
+
+    return `📋 Historial - ${formatearFecha(filtroFecha.value)} (Mejor Dia)${tipoTexto}`;
   }
 
   if (modoVista === "mes" && filtroMes.value) {
@@ -277,26 +298,40 @@ formulario.addEventListener("submit", function (e) {
   mostrarHoy();
 });
 
-// 🏆 Buscar automáticamente el mejor día
+// 🏆 Buscar mejor día por viajes o dinero
 function buscarMejorDia() {
   if (!viajes || viajes.length === 0) {
     alert("No hay viajes guardados");
     return;
   }
 
-  const conteoPorFecha = {};
+  const tipo = tipoMejorDia ? tipoMejorDia.value : "";
+
+  if (!tipo) {
+    alert("Selecciona 'Más viajes' o 'Más dinero'");
+    return;
+  }
+
+  const resumenPorFecha = {};
 
   viajes.forEach(v => {
     if (!v.fecha) return;
 
-    if (!conteoPorFecha[v.fecha]) {
-      conteoPorFecha[v.fecha] = 0;
+    if (!resumenPorFecha[v.fecha]) {
+      resumenPorFecha[v.fecha] = {
+        viajes: 0,
+        dinero: 0
+      };
     }
 
-    conteoPorFecha[v.fecha]++;
+    resumenPorFecha[v.fecha].viajes++;
+
+    if (v.estado === "Pagado") {
+      resumenPorFecha[v.fecha].dinero += Number(v.precio);
+    }
   });
 
-  const fechas = Object.keys(conteoPorFecha);
+  const fechas = Object.keys(resumenPorFecha);
 
   if (fechas.length === 0) {
     alert("No hay fechas válidas registradas");
@@ -304,16 +339,23 @@ function buscarMejorDia() {
   }
 
   let mejorFecha = fechas[0];
-  let mayorCantidad = conteoPorFecha[mejorFecha];
 
   fechas.forEach(fecha => {
-    const cantidad = conteoPorFecha[fecha];
+    const actual = resumenPorFecha[fecha];
+    const mejor = resumenPorFecha[mejorFecha];
 
-    if (cantidad > mayorCantidad) {
-      mayorCantidad = cantidad;
-      mejorFecha = fecha;
-    } else if (cantidad === mayorCantidad && fecha > mejorFecha) {
-      mejorFecha = fecha;
+    if (tipo === "dinero") {
+      if (actual.dinero > mejor.dinero) {
+        mejorFecha = fecha;
+      } else if (actual.dinero === mejor.dinero && fecha > mejorFecha) {
+        mejorFecha = fecha;
+      }
+    } else {
+      if (actual.viajes > mejor.viajes) {
+        mejorFecha = fecha;
+      } else if (actual.viajes === mejor.viajes && fecha > mejorFecha) {
+        mejorFecha = fecha;
+      }
     }
   });
 
@@ -322,8 +364,8 @@ function buscarMejorDia() {
   filtroFechaInicio.value = "";
   filtroFechaFin.value = "";
 
-  filtrarPorFecha();
   modoVista = "mejorDia";
+  filtrarPorFecha();
 }
 
 // 📅 Mostrar solo hoy
@@ -367,6 +409,7 @@ function mostrarViajes() {
   filtroMes.value = "";
   filtroFechaInicio.value = "";
   filtroFechaFin.value = "";
+  if (tipoMejorDia) tipoMejorDia.value = "";
   lista.innerHTML = "";
 
   viajesMostrados = [...viajes];
@@ -401,7 +444,10 @@ function filtrarPorFecha() {
     return;
   }
 
-  modoVista = "fecha";
+  if (modoVista !== "mejorDia") {
+    modoVista = "fecha";
+  }
+
   lista.innerHTML = "";
 
   let total = 0;
@@ -524,6 +570,7 @@ function filtrar() {
   const mes = filtroMes.value;
   const fechaInicio = filtroFechaInicio.value;
   const fechaFin = filtroFechaFin.value;
+  const tipo = tipoMejorDia ? tipoMejorDia.value : "";
 
   if (fechaInicio || fechaFin) {
     if (!fechaInicio || !fechaFin) {
@@ -544,7 +591,12 @@ function filtrar() {
     return;
   }
 
-  alert("Selecciona una fecha, un mes o un rango de fechas");
+  if (tipo === "viajes" || tipo === "dinero") {
+    buscarMejorDia();
+    return;
+  }
+
+  alert("Selecciona una fecha, un mes, un rango de fechas o una opción de mejor día");
 }
 
 // ❌ Limpiar búsqueda
@@ -553,6 +605,7 @@ function limpiarFiltro() {
   filtroMes.value = "";
   filtroFechaInicio.value = "";
   filtroFechaFin.value = "";
+  if (tipoMejorDia) tipoMejorDia.value = "";
   mostrarHoy();
 }
 
@@ -563,6 +616,7 @@ if (filtroFecha) {
       filtroMes.value = "";
       filtroFechaInicio.value = "";
       filtroFechaFin.value = "";
+      if (tipoMejorDia) tipoMejorDia.value = "";
     }
   });
 }
@@ -573,6 +627,7 @@ if (filtroMes) {
       filtroFecha.value = "";
       filtroFechaInicio.value = "";
       filtroFechaFin.value = "";
+      if (tipoMejorDia) tipoMejorDia.value = "";
     }
   });
 }
@@ -582,6 +637,7 @@ if (filtroFechaInicio) {
     if (filtroFechaInicio.value) {
       filtroFecha.value = "";
       filtroMes.value = "";
+      if (tipoMejorDia) tipoMejorDia.value = "";
     }
   });
 }
@@ -591,6 +647,18 @@ if (filtroFechaFin) {
     if (filtroFechaFin.value) {
       filtroFecha.value = "";
       filtroMes.value = "";
+      if (tipoMejorDia) tipoMejorDia.value = "";
+    }
+  });
+}
+
+if (tipoMejorDia) {
+  tipoMejorDia.addEventListener("change", () => {
+    if (tipoMejorDia.value) {
+      filtroFecha.value = "";
+      filtroMes.value = "";
+      filtroFechaInicio.value = "";
+      filtroFechaFin.value = "";
     }
   });
 }

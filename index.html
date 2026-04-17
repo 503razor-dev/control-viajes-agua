@@ -104,7 +104,6 @@
 <body>
 
   <div class="container">
-
     <h1>🚛 Viajes de Agua</h1>
 
     <form id="formulario">
@@ -136,10 +135,16 @@
     <input type="date" id="filtroFechaInicio">
     <input type="date" id="filtroFechaFin">
 
-<button type="button" onclick="filtrar()">🔍 Buscar</button>
-<button type="button" onclick="buscarMejorDia()">🏆 Mejor día</button>
-<button type="button" onclick="mostrarViajes()">📋 Mostrar todos</button>
-<button type="button" onclick="limpiarFiltro()">❌ Limpiar búsqueda</button>
+    <div class="subtitulo-filtro">Buscar mejor día por</div>
+    <select id="tipoMejorDia">
+      <option value="">Selecciona una opción (opcional)</option>
+      <option value="viajes">Más viajes</option>
+      <option value="dinero">Más dinero</option>
+    </select>
+
+    <button type="button" onclick="filtrar()">🔍 Buscar</button>
+    <button type="button" onclick="mostrarViajes()">📋 Mostrar todos</button>
+    <button type="button" onclick="limpiarFiltro()">❌ Limpiar búsqueda</button>
 
     <h3>💰 Total: $<span id="total">0</span></h3>
 
@@ -147,7 +152,6 @@
 
     <h3>📋 Historial</h3>
     <ul id="lista"></ul>
-
   </div>
 
   <script src="app.js"></script>
