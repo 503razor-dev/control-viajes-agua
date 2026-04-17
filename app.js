@@ -20,6 +20,18 @@ function formatearFecha(fecha) {
   return `${parseInt(partes[2], 10)} ${meses[parseInt(partes[1], 10) - 1]} ${partes[0]}`;
 }
 
+// 🔢 Fecha para nombre con día en 2 dígitos
+function formatearFechaParaNombre(fecha) {
+  if (!fecha) return "Sin_fecha";
+
+  const partes = fecha.split("-");
+  const year = partes[0];
+  const month = partes[1];
+  const day = partes[2];
+
+  return `${day}_${obtenerNombreMes(month)}_${year}`;
+}
+
 // 🔠 Poner mayúscula en cada palabra
 function capitalizarTexto(texto) {
   return texto
@@ -43,7 +55,7 @@ function obtenerNombreMes(numeroMes) {
 // 📦 Datos
 let viajes = JSON.parse(localStorage.getItem("viajes")) || [];
 let viajesMostrados = [];
-let modoVista = "hoy"; // hoy | fecha | mes | todo
+let modoVista = "hoy"; // hoy | fecha | mes | rango | todo
 
 const formulario = document.getElementById("formulario");
 const lista = document.getElementById("lista");
@@ -51,6 +63,8 @@ const totalSpan = document.getElementById("total");
 const inputFecha = document.getElementById("fecha");
 const filtroFecha = document.getElementById("filtroFecha");
 const filtroMes = document.getElementById("filtroMes");
+const filtroFechaInicio = document.getElementById("filtroFechaInicio");
+const filtroFechaFin = document.getElementById("filtroFechaFin");
 
 // ✅ Nuevos elementos visuales para cambio
 const inputPrecio = document.getElementById("precio");
@@ -103,8 +117,7 @@ function obtenerNombreHistorial() {
   }
 
   if (modoVista === "fecha" && filtroFecha.value) {
-    const [year, month, day] = filtroFecha.value.split("-");
-    return `${parseInt(day, 10)}_${obtenerNombreMes(month)}_${year}`;
+    return formatearFechaParaNombre(filtroFecha.value);
   }
 
   if (modoVista === "mes" && filtroMes.value) {
@@ -112,7 +125,11 @@ function obtenerNombreHistorial() {
     return `${obtenerNombreMes(month)}_${year}`;
   }
 
-  return "Historial_Hoy";
+  if (modoVista === "rango" && filtroFechaInicio.value && filtroFechaFin.value) {
+    return `${formatearFechaParaNombre(filtroFechaInicio.value)}_al_${formatearFechaParaNombre(filtroFechaFin.value)}`;
+  }
+
+  return `Historial_Hoy_${formatearFechaParaNombre(obtenerFechaHoy())}`;
 }
 
 // 🧾 Título según vista
@@ -128,6 +145,10 @@ function obtenerTituloHistorial() {
   if (modoVista === "mes" && filtroMes.value) {
     const [year, month] = filtroMes.value.split("-");
     return `📋 Historial - ${obtenerNombreMes(month)} ${year}`;
+  }
+
+  if (modoVista === "rango" && filtroFechaInicio.value && filtroFechaFin.value) {
+    return `📋 Historial - ${formatearFecha(filtroFechaInicio.value)} al ${formatearFecha(filtroFechaFin.value)}`;
   }
 
   return `📋 Historial - ${formatearFecha(obtenerFechaHoy())}`;
@@ -165,6 +186,8 @@ function crearItem(v) {
       filtrarPorFecha();
     } else if (modoVista === "mes" && filtroMes.value) {
       filtrarPorMes();
+    } else if (modoVista === "rango" && filtroFechaInicio.value && filtroFechaFin.value) {
+      filtrarPorRango();
     } else if (modoVista === "todo") {
       mostrarViajes();
     } else {
@@ -232,7 +255,6 @@ formulario.addEventListener("submit", function (e) {
   viajes.push(viaje);
   guardar();
 
-  // Después de guardar, vuelve a la vista de hoy
   formulario.reset();
   inputFecha.value = obtenerFechaHoy();
   resetearCambioVisual();
@@ -278,6 +300,8 @@ function mostrarViajes() {
   modoVista = "todo";
   filtroFecha.value = "";
   filtroMes.value = "";
+  filtroFechaInicio.value = "";
+  filtroFechaFin.value = "";
   lista.innerHTML = "";
 
   viajesMostrados = [...viajes];
@@ -383,10 +407,67 @@ function filtrarPorMes() {
   }
 }
 
+// 📆 Filtrar por rango de fechas
+function filtrarPorRango() {
+  const fechaInicio = filtroFechaInicio.value;
+  const fechaFin = filtroFechaFin.value;
+
+  if (!fechaInicio || !fechaFin) {
+    alert("Selecciona fecha inicio y fecha fin");
+    return;
+  }
+
+  if (fechaInicio > fechaFin) {
+    alert("La fecha inicio no puede ser mayor que la fecha fin");
+    return;
+  }
+
+  modoVista = "rango";
+  lista.innerHTML = "";
+
+  let total = 0;
+  let pendiente = 0;
+  let totalViajes = 0;
+
+  viajesMostrados = [];
+
+  viajes.forEach((v) => {
+    if (v.fecha >= fechaInicio && v.fecha <= fechaFin) {
+      viajesMostrados.push(v);
+      totalViajes++;
+      lista.appendChild(crearItem(v));
+
+      if (v.estado === "Pagado") {
+        total += Number(v.precio);
+      } else {
+        pendiente += Number(v.precio);
+      }
+    }
+  });
+
+  totalSpan.textContent = total.toFixed(2);
+  actualizarResumen(totalViajes, pendiente);
+
+  if (totalViajes === 0) {
+    lista.innerHTML = '<div class="mensaje-vacio">No hay viajes en ese rango de fechas</div>';
+  }
+}
+
 // 🔍 Filtro inteligente
 function filtrar() {
   const fecha = filtroFecha.value;
   const mes = filtroMes.value;
+  const fechaInicio = filtroFechaInicio.value;
+  const fechaFin = filtroFechaFin.value;
+
+  if (fechaInicio || fechaFin) {
+    if (!fechaInicio || !fechaFin) {
+      alert("Para buscar por rango debes seleccionar ambas fechas");
+      return;
+    }
+    filtrarPorRango();
+    return;
+  }
 
   if (fecha) {
     filtrarPorFecha();
@@ -398,13 +479,15 @@ function filtrar() {
     return;
   }
 
-  alert("Selecciona una fecha o un mes");
+  alert("Selecciona una fecha, un mes o un rango de fechas");
 }
 
 // ❌ Limpiar búsqueda
 function limpiarFiltro() {
   filtroFecha.value = "";
   filtroMes.value = "";
+  filtroFechaInicio.value = "";
+  filtroFechaFin.value = "";
   mostrarHoy();
 }
 
@@ -413,6 +496,8 @@ if (filtroFecha) {
   filtroFecha.addEventListener("change", () => {
     if (filtroFecha.value) {
       filtroMes.value = "";
+      filtroFechaInicio.value = "";
+      filtroFechaFin.value = "";
     }
   });
 }
@@ -421,6 +506,26 @@ if (filtroMes) {
   filtroMes.addEventListener("change", () => {
     if (filtroMes.value) {
       filtroFecha.value = "";
+      filtroFechaInicio.value = "";
+      filtroFechaFin.value = "";
+    }
+  });
+}
+
+if (filtroFechaInicio) {
+  filtroFechaInicio.addEventListener("change", () => {
+    if (filtroFechaInicio.value) {
+      filtroFecha.value = "";
+      filtroMes.value = "";
+    }
+  });
+}
+
+if (filtroFechaFin) {
+  filtroFechaFin.addEventListener("change", () => {
+    if (filtroFechaFin.value) {
+      filtroFecha.value = "";
+      filtroMes.value = "";
     }
   });
 }

@@ -91,6 +91,14 @@
       font-weight: bold;
       color: #333;
     }
+
+    .subtitulo-filtro {
+      font-size: 13px;
+      color: #666;
+      margin-top: 12px;
+      margin-bottom: 4px;
+      font-weight: bold;
+    }
   </style>
 </head>
 <body>
@@ -100,29 +108,33 @@
     <h1>🚛 Viajes de Agua</h1>
 
     <form id="formulario">
-  <input type="text" id="cliente" placeholder="Cliente" required>
+      <input type="text" id="cliente" placeholder="Cliente" required>
+      <input type="number" id="precio" placeholder="Precio" required>
+      <input type="number" id="pagaCon" placeholder="Paga con (opcional)" min="0" step="0.01">
 
-  <input type="number" id="precio" placeholder="Precio" required>
+      <select id="estado">
+        <option value="Pagado">Pagado</option>
+        <option value="Pendiente">Pendiente</option>
+      </select>
 
-  <!-- 👇 AHORA VA AQUÍ -->
-  <input type="number" id="pagaCon" placeholder="Paga con (opcional)" min="0" step="0.01">
+      <div id="cambioVisual" class="cambio-visual">💵 Cambio: $0.00</div>
 
-  <select id="estado">
-    <option value="Pagado">Pagado</option>
-    <option value="Pendiente">Pendiente</option>
-  </select>
+      <input type="date" id="fecha" required>
 
-  <div id="cambioVisual" class="cambio-visual">💵 Cambio: $0.00</div>
-
-  <input type="date" id="fecha" required>
-
-  <button type="submit">Guardar Viaje</button>
-</form>
+      <button type="submit">Guardar Viaje</button>
+    </form>
 
     <h3>🔍 Filtrar búsquedas</h3>
 
+    <div class="subtitulo-filtro">Por fecha exacta</div>
     <input type="date" id="filtroFecha">
+
+    <div class="subtitulo-filtro">Por mes</div>
     <input type="month" id="filtroMes">
+
+    <div class="subtitulo-filtro">Por rango de fechas</div>
+    <input type="date" id="filtroFechaInicio">
+    <input type="date" id="filtroFechaFin">
 
     <button type="button" onclick="filtrar()">🔍 Buscar</button>
     <button type="button" onclick="mostrarViajes()">📋 Mostrar todos</button>
