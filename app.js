@@ -32,6 +32,11 @@ function formatearFechaParaNombre(fecha) {
   return `${day}_${obtenerNombreMes(month)}_${year}`;
 }
 
+// 🔢 Número con 2 dígitos
+function formatearNumero(numero) {
+  return String(numero).padStart(2, "0");
+}
+
 // 🔠 Poner mayúscula en cada palabra
 function capitalizarTexto(texto) {
   return texto
@@ -160,11 +165,12 @@ function guardar() {
 }
 
 // 📋 Crear item del historial
-function crearItem(v) {
+function crearItem(v, numero) {
   const li = document.createElement("li");
+  const numeroFormateado = formatearNumero(numero);
 
   li.innerHTML = `
-    📅 ${formatearFecha(v.fecha)} <br>
+    <strong>${numeroFormateado}- 📅 ${formatearFecha(v.fecha)}</strong> <br>
     👤 ${v.cliente} - 💰 $${Number(v.precio).toFixed(2)}
     <strong>(${v.estado})</strong>
   `;
@@ -273,11 +279,11 @@ function mostrarHoy() {
 
   viajesMostrados = [];
 
-  viajes.forEach((v) => {
+  viajes.forEach((v, index) => {
     if (v.fecha === hoy) {
       viajesMostrados.push(v);
       totalViajes++;
-      lista.appendChild(crearItem(v));
+      lista.appendChild(crearItem(v, totalViajes));
 
       if (v.estado === "Pagado") {
         total += Number(v.precio);
@@ -309,8 +315,8 @@ function mostrarViajes() {
   let total = 0;
   let pendiente = 0;
 
-  viajes.forEach((v) => {
-    lista.appendChild(crearItem(v));
+  viajes.forEach((v, index) => {
+    lista.appendChild(crearItem(v, index + 1));
 
     if (v.estado === "Pagado") {
       total += Number(v.precio);
@@ -349,7 +355,7 @@ function filtrarPorFecha() {
     if (v.fecha === fechaSeleccionada) {
       viajesMostrados.push(v);
       totalViajes++;
-      lista.appendChild(crearItem(v));
+      lista.appendChild(crearItem(v, totalViajes));
 
       if (v.estado === "Pagado") {
         total += Number(v.precio);
@@ -389,7 +395,7 @@ function filtrarPorMes() {
     if (v.fecha && v.fecha.startsWith(mesSeleccionado)) {
       viajesMostrados.push(v);
       totalViajes++;
-      lista.appendChild(crearItem(v));
+      lista.appendChild(crearItem(v, totalViajes));
 
       if (v.estado === "Pagado") {
         total += Number(v.precio);
@@ -435,7 +441,7 @@ function filtrarPorRango() {
     if (v.fecha >= fechaInicio && v.fecha <= fechaFin) {
       viajesMostrados.push(v);
       totalViajes++;
-      lista.appendChild(crearItem(v));
+      lista.appendChild(crearItem(v, totalViajes));
 
       if (v.estado === "Pagado") {
         total += Number(v.precio);
@@ -550,16 +556,15 @@ function guardarHistorial() {
       <hr>
   `;
 
-  viajesMostrados.forEach(v => {
+  viajesMostrados.forEach((v, index) => {
     totalViajes++;
     const precio = Number(v.precio);
+    const numeroFormateado = formatearNumero(index + 1);
 
     contenido += `
       <p>
-        📅 ${formatearFecha(v.fecha)} |
-        👤 ${v.cliente} |
-        💰 $${precio.toFixed(2)} |
-        ${v.estado}
+        <strong>${numeroFormateado}- 📅 ${formatearFecha(v.fecha)}</strong><br>
+        👤 ${v.cliente} - 💰 $${precio.toFixed(2)} | ${v.estado}
       </p>
     `;
 
