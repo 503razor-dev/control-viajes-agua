@@ -97,37 +97,53 @@ function actualizarFormularioSegunTipo() {
 
   if (tipo === "viaje") {
     inputCliente.placeholder = "Cliente o concepto";
+
+    inputPrecio.style.display = "block";
     bloqueCantidadViajes.style.display = "block";
     bloquePagaCon.style.display = "block";
     bloqueEstado.style.display = "block";
     bloqueGasto.style.display = "none";
+
     inputPrecio.placeholder = "Precio o ingreso";
-    inputCantidadViajes.value = inputCantidadViajes.value || 1;
     inputGasto.value = "";
   }
 
-  if (tipo === "soloDinero") {
-    inputCliente.placeholder = "Concepto del ingreso";
-    bloqueCantidadViajes.style.display = "none";
-    bloquePagaCon.style.display = "block";
-    bloqueEstado.style.display = "none";
-    bloqueGasto.style.display = "none";
-    inputPrecio.placeholder = "Monto del ingreso";
-    inputCantidadViajes.value = 1;
-    inputEstado.value = "Pagado";
-    inputGasto.value = "";
-  }
+ if (tipo === "soloDinero") {
+  inputCliente.placeholder = "Concepto del ingreso";
+
+  inputPrecio.style.display = "block";
+  bloqueCantidadViajes.style.display = "none";
+  bloquePagaCon.style.display = "none";
+  bloqueEstado.style.display = "none";
+  bloqueGasto.style.display = "none";
+
+  inputPrecio.placeholder = "Monto del ingreso";
+
+  inputCantidadViajes.value = 1;
+  inputPagaCon.value = "";
+  inputEstado.value = "Pagado";
+  inputGasto.value = "";
+
+  totalVisual.textContent = "Total: $0.00";
+  cambioVisual.textContent = "Cambio: $0.00";
+}
 
   if (tipo === "gasto") {
     inputCliente.placeholder = "Concepto del gasto";
+
+    inputPrecio.style.display = "none";
     bloqueCantidadViajes.style.display = "none";
     bloquePagaCon.style.display = "none";
     bloqueEstado.style.display = "none";
     bloqueGasto.style.display = "block";
+
     inputPrecio.value = "";
     inputCantidadViajes.value = 1;
     inputPagaCon.value = "";
     inputEstado.value = "Pagado";
+
+    totalVisual.textContent = "Total: $0.00";
+    cambioVisual.textContent = "Cambio: $0.00";
   }
 
   actualizarCambioVisual();
