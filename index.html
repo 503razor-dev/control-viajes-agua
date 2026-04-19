@@ -114,6 +114,10 @@
     .bloque-oculto {
       display: none;
     }
+
+    .campo-oculto {
+      display: none;
+    }
   </style>
 </head>
 <body>
@@ -121,29 +125,43 @@
   <div class="container">
     <h1>Viajes de Agua</h1>
 
-   <form id="formulario">
-  <input type="text" id="cliente" placeholder="Cliente o gasto" required>
+    <form id="formulario">
+      <select id="tipoRegistro">
+        <option value="viaje">Viaje</option>
+        <option value="soloDinero">Solo dinero</option>
+        <option value="gasto">Gasto</option>
+      </select>
 
-  <input type="number" id="precio" placeholder="Precio" min="0" step="0.01">
+      <input type="text" id="cliente" placeholder="Cliente o concepto" required>
 
-  <input type="number" id="cantidadViajes" placeholder="Cantidad de viajes" min="1" step="1" value="1">
+      <input type="number" id="precio" placeholder="Precio o ingreso" min="0" step="0.01">
 
-  <input type="number" id="pagaCon" placeholder="Paga con (opcional)" min="0" step="0.01">
+      <div id="bloqueCantidadViajes">
+        <input type="number" id="cantidadViajes" placeholder="Cantidad de viajes" min="1" step="1" value="1">
+      </div>
 
-  <input type="number" id="gasto" placeholder="Gasto (opcional)" min="0" step="0.01">
+      <div id="bloquePagaCon">
+        <input type="number" id="pagaCon" placeholder="Paga con (opcional)" min="0" step="0.01">
+      </div>
 
-  <select id="estado">
-    <option value="Pagado">Pagado</option>
-    <option value="Pendiente">Pendiente</option>
-  </select>
+      <div id="bloqueGasto" class="campo-oculto">
+        <input type="number" id="gasto" placeholder="Gasto" min="0" step="0.01">
+      </div>
 
-  <div id="totalVisual" class="cambio-visual">Total: $0.00</div>
-  <div id="cambioVisual" class="cambio-visual">Cambio: $0.00</div>
+      <div id="bloqueEstado">
+        <select id="estado">
+          <option value="Pagado">Pagado</option>
+          <option value="Pendiente">Pendiente</option>
+        </select>
+      </div>
 
-  <input type="date" id="fecha" required>
+      <div id="totalVisual" class="cambio-visual">Total: $0.00</div>
+      <div id="cambioVisual" class="cambio-visual">Cambio: $0.00</div>
 
-  <button type="submit">Guardar Viaje</button>
-</form>
+      <input type="date" id="fecha" required>
+
+      <button type="submit">Guardar Registro</button>
+    </form>
 
     <h3>Filtrar búsquedas</h3>
 
@@ -152,6 +170,7 @@
       <option value="todo">Todo general</option>
       <option value="ingreso">Ingreso</option>
       <option value="pendiente">Pendiente</option>
+      <option value="soloDinero">Solo dinero</option>
       <option value="gasto">Gasto</option>
     </select>
 
