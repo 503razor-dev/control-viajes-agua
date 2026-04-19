@@ -539,7 +539,7 @@ formulario.addEventListener("submit", function (e) {
     return;
   }
 
-  if (precio > 0) {
+if (precio >= 0) {
     if (cantidadViajes < 1) {
       alert("La cantidad de viajes debe ser mínimo 1");
       return;
