@@ -99,58 +99,109 @@
       margin-bottom: 4px;
       font-weight: bold;
     }
+
+    .grupo-titulo {
+      margin-top: 14px;
+      margin-bottom: 6px;
+      padding: 8px 10px;
+      border-radius: 6px;
+      font-weight: bold;
+      background: #e9ecef;
+      color: #333;
+      list-style: none;
+    }
+
+    .bloque-oculto {
+      display: none;
+    }
   </style>
 </head>
 <body>
 
   <div class="container">
-    <h1>🚛 Viajes de Agua</h1>
+    <h1>Viajes de Agua</h1>
 
-    <form id="formulario">
-      <input type="text" id="cliente" placeholder="Cliente" required>
-      <input type="number" id="precio" placeholder="Precio" required>
-      <input type="number" id="pagaCon" placeholder="Paga con (opcional)" min="0" step="0.01">
+   <form id="formulario">
+  <input type="text" id="cliente" placeholder="Cliente o gasto" required>
 
-      <select id="estado">
-        <option value="Pagado">Pagado</option>
-        <option value="Pendiente">Pendiente</option>
-      </select>
+  <input type="number" id="precio" placeholder="Precio" min="0" step="0.01">
 
-      <div id="cambioVisual" class="cambio-visual">💵 Cambio: $0.00</div>
+  <input type="number" id="cantidadViajes" placeholder="Cantidad de viajes" min="1" step="1" value="1">
 
-      <input type="date" id="fecha" required>
+  <input type="number" id="pagaCon" placeholder="Paga con (opcional)" min="0" step="0.01">
 
-      <button type="submit">Guardar Viaje</button>
-    </form>
+  <input type="number" id="gasto" placeholder="Gasto (opcional)" min="0" step="0.01">
 
-    <h3>🔍 Filtrar búsquedas</h3>
+  <select id="estado">
+    <option value="Pagado">Pagado</option>
+    <option value="Pendiente">Pendiente</option>
+  </select>
 
-    <div class="subtitulo-filtro">Por fecha exacta</div>
-    <input type="date" id="filtroFecha">
+  <div id="totalVisual" class="cambio-visual">Total: $0.00</div>
+  <div id="cambioVisual" class="cambio-visual">Cambio: $0.00</div>
 
-    <div class="subtitulo-filtro">Por mes</div>
-    <input type="month" id="filtroMes">
+  <input type="date" id="fecha" required>
 
-    <div class="subtitulo-filtro">Por rango de fechas</div>
-    <input type="date" id="filtroFechaInicio">
-    <input type="date" id="filtroFechaFin">
+  <button type="submit">Guardar Viaje</button>
+</form>
 
-    <div class="subtitulo-filtro">Buscar mejor día por</div>
-    <select id="tipoMejorDia">
-      <option value="">Selecciona una opción (opcional)</option>
-      <option value="viajes">Más viajes</option>
-      <option value="dinero">Más dinero</option>
+    <h3>Filtrar búsquedas</h3>
+
+    <div class="subtitulo-filtro">Filtrar</div>
+    <select id="filtroTipo">
+      <option value="todo">Todo general</option>
+      <option value="ingreso">Ingreso</option>
+      <option value="pendiente">Pendiente</option>
+      <option value="gasto">Gasto</option>
     </select>
 
-    <button type="button" onclick="filtrar()">🔍 Buscar</button>
-    <button type="button" onclick="mostrarViajes()">📋 Mostrar todos</button>
-    <button type="button" onclick="limpiarFiltro()">❌ Limpiar búsqueda</button>
+    <div class="subtitulo-filtro">Buscar por</div>
+    <select id="buscarPor">
+      <option value="ninguno">Ninguno</option>
+      <option value="fecha">Fecha exacta</option>
+      <option value="mes">Mes</option>
+      <option value="rango">Rango de fechas</option>
+      <option value="mejorDia">Mejor día</option>
+    </select>
 
-    <h3>💰 Total: $<span id="total">0</span></h3>
+    <div id="bloqueFecha" class="bloque-oculto">
+      <div class="subtitulo-filtro">Por fecha exacta</div>
+      <input type="date" id="filtroFecha">
+    </div>
 
-    <button type="button" onclick="guardarHistorial()">💾 Guardar historial</button>
+    <div id="bloqueMes" class="bloque-oculto">
+      <div class="subtitulo-filtro">Por mes</div>
+      <input type="month" id="filtroMes">
+    </div>
 
-    <h3>📋 Historial</h3>
+    <div id="bloqueRango" class="bloque-oculto">
+      <div class="subtitulo-filtro">Por rango de fechas</div>
+      <input type="date" id="filtroFechaInicio">
+      <input type="date" id="filtroFechaFin">
+    </div>
+
+    <div id="bloqueMejorDia" class="bloque-oculto">
+      <div class="subtitulo-filtro">Buscar mejor día por</div>
+      <select id="tipoMejorDia">
+        <option value="">Selecciona una opción (opcional)</option>
+        <option value="viajes">Más viajes</option>
+        <option value="dinero">Más dinero</option>
+      </select>
+    </div>
+
+    <button type="button" onclick="filtrar()">Buscar</button>
+    <button type="button" onclick="mostrarViajes()">Mostrar todos</button>
+    <button type="button" onclick="limpiarFiltro()">Limpiar búsqueda</button>
+
+    <h3>Total: $<span id="total">0.00</span></h3>
+    <h3 id="totalViajes">Total de viajes: 0</h3>
+    <h3 id="totalGastado">Total gastado: $0.00</h3>
+    <h3 id="disponible">Disponible: $0.00</h3>
+    <h3 id="deuda">Te deben: $0.00</h3>
+
+    <button type="button" onclick="guardarHistorial()">Guardar historial</button>
+
+    <h3>Historial</h3>
     <ul id="lista"></ul>
   </div>
 
