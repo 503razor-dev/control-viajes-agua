@@ -1,6 +1,68 @@
 const MAX_SELLOS = 9;
 const URL_APP_PUBLICADA = "https://503razor-dev.github.io/control-viajes-agua/";
 
+function obtenerFechaHoy() {
+  const hoy = new Date();
+  const year = hoy.getFullYear();
+  const month = String(hoy.getMonth() + 1).padStart(2, "0");
+  const day = String(hoy.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function formatearFecha(fecha) {
+  if (!fecha) return "Sin fecha";
+
+  const partes = fecha.split("-");
+  const meses = [
+    "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+    "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+  ];
+
+  return `${parseInt(partes[2], 10)} ${meses[parseInt(partes[1], 10) - 1]} ${partes[0]}`;
+}
+
+function formatearFechaParaNombre(fecha) {
+  if (!fecha) return "Sin_fecha";
+
+  const partes = fecha.split("-");
+  const year = partes[0];
+  const month = partes[1];
+  const day = partes[2];
+
+  return `${day}_${obtenerNombreMes(month)}_${year}`;
+}
+
+function formatearNumero(numero) {
+  return String(numero).padStart(2, "0");
+}
+
+function capitalizarTexto(texto) {
+  if (!texto) return "";
+  return texto
+    .trim()
+    .split(/\s+/)
+    .filter(p => p !== "")
+    .map((palabra) => palabra.charAt(0).toUpperCase() + palabra.slice(1).toLowerCase())
+    .join(" ");
+}
+
+function obtenerNombreMes(numeroMes) {
+  const meses = [
+    "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+    "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+  ];
+  return meses[parseInt(numeroMes, 10) - 1];
+}
+
+function escaparHtml(texto) {
+  return String(texto || "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
 let viajes = JSON.parse(localStorage.getItem("viajes")) || [];
 let tarjetas = JSON.parse(localStorage.getItem("tarjetasFidelidad")) || [];
 let viajesMostrados = [];
@@ -51,64 +113,8 @@ const bloquePagaCon = document.getElementById("bloquePagaCon");
 const bloqueGasto = document.getElementById("bloqueGasto");
 const bloqueEstado = document.getElementById("bloqueEstado");
 
-function obtenerFechaHoy() {
-  const hoy = new Date();
-  const year = hoy.getFullYear();
-  const month = String(hoy.getMonth() + 1).padStart(2, "0");
-  const day = String(hoy.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
-function formatearFecha(fecha) {
-  if (!fecha) return "Sin fecha";
-
-  const partes = fecha.split("-");
-  const meses = [
-    "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
-    "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
-  ];
-
-  return `${parseInt(partes[2], 10)} ${meses[parseInt(partes[1], 10) - 1]} ${partes[0]}`;
-}
-
-function obtenerNombreMes(numeroMes) {
-  const meses = [
-    "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
-    "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
-  ];
-
-  return meses[parseInt(numeroMes, 10) - 1];
-}
-
-function formatearFechaParaNombre(fecha) {
-  if (!fecha) return "Sin_fecha";
-
-  const partes = fecha.split("-");
-  return `${partes[2]}_${obtenerNombreMes(partes[1])}_${partes[0]}`;
-}
-
-function formatearNumero(numero) {
-  return String(numero).padStart(2, "0");
-}
-
-function capitalizarTexto(texto) {
-  if (!texto) return "";
-
-  return texto
-    .trim()
-    .split(/\s+/)
-    .filter(palabra => palabra !== "")
-    .map(palabra => palabra.charAt(0).toUpperCase() + palabra.slice(1).toLowerCase())
-    .join(" ");
-}
-
-function escaparHtml(texto) {
-  return String(texto || "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
+if (inputFecha) {
+  inputFecha.value = obtenerFechaHoy();
 }
 
 function guardar() {
@@ -143,6 +149,7 @@ function buscarTarjetaPorCodigo(codigo) {
 
 function obtenerUrlTarjeta(tarjeta) {
   const url = new URL(URL_APP_PUBLICADA);
+  url.search = "";
   url.searchParams.set("tipo", "viaje");
   url.searchParams.set("cliente", tarjeta.cliente);
   url.searchParams.set("lugar", tarjeta.lugar);
@@ -155,9 +162,118 @@ function obtenerUrlQr(tarjeta) {
   return `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${data}`;
 }
 
-function alternarTarjetas() {
-  const estaAbierto = contenedorTarjetas.classList.toggle("abierto");
-  flechaTarjetas.textContent = estaAbierto ? "▲" : "▼";
+async function compartirQr(codigo) {
+  const tarjeta = buscarTarjetaPorCodigo(codigo);
+  if (!tarjeta) return;
+
+  const urlQr = obtenerUrlQr(tarjeta);
+
+  try {
+    const respuesta = await fetch(urlQr);
+    const blob = await respuesta.blob();
+    const archivo = new File([blob], `QR_${tarjeta.codigo}.png`, { type: "image/png" });
+
+    if (navigator.canShare && navigator.canShare({ files: [archivo] })) {
+      await navigator.share({
+        title: `QR ${tarjeta.codigo}`,
+        files: [archivo]
+      });
+      return;
+    }
+  } catch (error) {
+    console.warn("No se pudo compartir el QR como imagen", error);
+  }
+
+  window.open(urlQr, "_blank");
+}
+function abrirPdfQr(codigo) {
+  const tarjeta = buscarTarjetaPorCodigo(codigo);
+  if (!tarjeta) return;
+
+  const ventana = window.open("", "_blank");
+
+  if (!ventana) {
+    alert("El navegador bloqueó la ventana emergente.");
+    return;
+  }
+
+  ventana.document.write(`
+    <html>
+      <head>
+        <title>Tarjeta_${escaparHtml(tarjeta.codigo)}</title>
+        <meta charset="UTF-8">
+        <style>
+          body {
+            margin: 0;
+            padding: 30px;
+            background: #e5e5e5;
+            font-family: Arial, sans-serif;
+          }
+
+          .hoja {
+            width: 100%;
+            max-width: 420px;
+            margin: 0 auto;
+            background: white;
+            padding: 28px;
+            border-radius: 10px;
+            box-shadow: 0 0 12px rgba(0,0,0,0.18);
+            box-sizing: border-box;
+            text-align: center;
+          }
+
+          h1 {
+            margin: 0 0 22px;
+            font-size: 26px;
+            text-transform: uppercase;
+          }
+
+          .dato {
+            font-size: 19px;
+            text-align: left;
+            margin: 12px 0;
+          }
+
+          .qr-grande {
+            width: 260px;
+            height: 260px;
+            margin: 24px auto 0;
+            display: block;
+          }
+
+          @media print {
+            body {
+              background: white;
+              padding: 0;
+            }
+
+            .hoja {
+              max-width: 100%;
+              box-shadow: none;
+              border-radius: 0;
+              margin: 0;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="hoja">
+          <h1>Tarjeta de Fidelidad</h1>
+          <div class="dato"><strong>Cliente:</strong> ${escaparHtml(tarjeta.cliente)}</div>
+          <div class="dato"><strong>Lugar:</strong> ${escaparHtml(tarjeta.lugar)}</div>
+          <div class="dato"><strong>Código:</strong> ${escaparHtml(tarjeta.codigo)}</div>
+          <img class="qr-grande" src="${obtenerUrlQr(tarjeta)}" alt="QR">
+        </div>
+        <script>
+          window.onload = () => {
+            setTimeout(() => window.print(), 500);
+          };
+        <\/script>
+      </body>
+    </html>
+  `);
+
+  ventana.document.close();
 }
 
 function actualizarVistaTarjetaNueva() {
@@ -177,12 +293,10 @@ function usarTarjeta(codigo) {
 
   tipoRegistro.value = "viaje";
   actualizarFormularioSegunTipo();
-
   inputCliente.value = tarjeta.cliente;
   inputLugar.value = tarjeta.lugar;
   inputCodigo.value = tarjeta.codigo;
   inputFecha.value = obtenerFechaHoy();
-
   actualizarCambioVisual();
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
@@ -194,7 +308,7 @@ function eliminarTarjeta(codigo) {
   const confirmar = confirm(`¿Eliminar la tarjeta de ${tarjeta.cliente}?`);
   if (!confirmar) return;
 
-  tarjetas = tarjetas.filter(tarjetaActual => tarjetaActual.codigo !== codigo);
+  tarjetas = tarjetas.filter(t => t.codigo !== codigo);
   guardar();
   renderTarjetas();
 }
@@ -222,6 +336,7 @@ function renderTarjetas() {
       <div class="sellos">${dibujarSellos(tarjeta.sellos)}</div>
       <img class="qr" src="${obtenerUrlQr(tarjeta)}" alt="QR de ${escaparHtml(tarjeta.cliente)}">
       <a class="enlace-qr" href="${urlTarjeta}">${urlTarjeta}</a>
+      
     `;
 
     const btnUsar = document.createElement("button");
@@ -230,6 +345,12 @@ function renderTarjetas() {
     btnUsar.textContent = "Usar en viaje";
     btnUsar.onclick = () => usarTarjeta(tarjeta.codigo);
 
+    const btnCompartir = document.createElement("button");
+    btnCompartir.type = "button";
+    btnCompartir.className = "btn-secundario";
+    btnCompartir.textContent = "PDF QR";
+    btnCompartir.onclick = () => abrirPdfQr(tarjeta.codigo);
+
     const btnEliminar = document.createElement("button");
     btnEliminar.type = "button";
     btnEliminar.className = "btn-eliminar";
@@ -237,9 +358,15 @@ function renderTarjetas() {
     btnEliminar.onclick = () => eliminarTarjeta(tarjeta.codigo);
 
     li.appendChild(btnUsar);
+    li.appendChild(btnCompartir);
     li.appendChild(btnEliminar);
     listaTarjetas.appendChild(li);
   });
+}
+
+function alternarTarjetas() {
+  const estaAbierto = contenedorTarjetas.classList.toggle("abierto");
+  flechaTarjetas.textContent = estaAbierto ? "▲" : "▼";
 }
 
 function marcarViajesEnTarjeta(codigo, cantidad) {
@@ -265,31 +392,32 @@ function aplicarDatosDesdeQr() {
 
   tipoRegistro.value = "viaje";
   actualizarFormularioSegunTipo();
-
   inputCliente.value = cliente || "";
   inputLugar.value = lugar || "";
   inputCodigo.value = codigo || "";
   inputFecha.value = obtenerFechaHoy();
 }
-
 function actualizarFormularioSegunTipo() {
   const tipo = tipoRegistro.value;
 
   if (tipo === "viaje") {
     inputCliente.placeholder = "Cliente";
+
     inputPrecio.style.display = "block";
-    bloqueLugarCodigo.style.display = "block";
+    bloqueLugarCodigo.style.display = "none";
     bloqueCantidadViajes.style.display = "block";
     bloquePagaCon.style.display = "block";
     bloqueEstado.style.display = "block";
     bloqueGasto.style.display = "none";
     bloqueFidelidadNuevo.style.display = "none";
+
     inputPrecio.placeholder = "Precio o ingreso";
     inputGasto.value = "";
   }
 
   if (tipo === "nuevoUsuario") {
     inputCliente.placeholder = "Cliente";
+
     inputPrecio.style.display = "none";
     bloqueLugarCodigo.style.display = "block";
     bloqueCantidadViajes.style.display = "none";
@@ -313,6 +441,7 @@ function actualizarFormularioSegunTipo() {
 
   if (tipo === "soloDinero") {
     inputCliente.placeholder = "Concepto del ingreso";
+
     inputPrecio.style.display = "block";
     bloqueLugarCodigo.style.display = "none";
     bloqueCantidadViajes.style.display = "none";
@@ -322,6 +451,7 @@ function actualizarFormularioSegunTipo() {
     bloqueFidelidadNuevo.style.display = "none";
 
     inputPrecio.placeholder = "Monto del ingreso";
+
     inputLugar.value = "";
     inputCodigo.value = "";
     inputCantidadViajes.value = 1;
@@ -335,6 +465,7 @@ function actualizarFormularioSegunTipo() {
 
   if (tipo === "gasto") {
     inputCliente.placeholder = "Concepto del gasto";
+
     inputPrecio.style.display = "none";
     bloqueLugarCodigo.style.display = "none";
     bloqueCantidadViajes.style.display = "none";
@@ -357,6 +488,7 @@ function actualizarFormularioSegunTipo() {
   actualizarCambioVisual();
 }
 
+
 function actualizarCambioVisual() {
   const tipo = tipoRegistro.value;
   const precio = parseFloat(inputPrecio.value) || 0;
@@ -378,21 +510,31 @@ function actualizarCambioVisual() {
   }
 
   const diferencia = pagaCon - total;
-  cambioVisual.textContent = diferencia >= 0
-    ? `Cambio: $${diferencia.toFixed(2)}`
-    : `Faltan: $${Math.abs(diferencia).toFixed(2)}`;
+
+  if (diferencia >= 0) {
+    cambioVisual.textContent = `Cambio: $${diferencia.toFixed(2)}`;
+  } else {
+    cambioVisual.textContent = `Faltan: $${Math.abs(diferencia).toFixed(2)}`;
+  }
 }
 
 function resetearCambioVisual() {
-  inputPagaCon.value = "";
-  inputCantidadViajes.value = 1;
-  inputPrecio.value = "";
-  inputGasto.value = "";
-  inputLugar.value = "";
-  inputCodigo.value = "";
-  totalVisual.textContent = "Total: $0.00";
-  cambioVisual.textContent = "Cambio: $0.00";
+  if (inputPagaCon) inputPagaCon.value = "";
+  if (inputCantidadViajes) inputCantidadViajes.value = 1;
+  if (inputPrecio) inputPrecio.value = "";
+  if (inputGasto) inputGasto.value = "";
+  if (inputLugar) inputLugar.value = "";
+  if (inputCodigo) inputCodigo.value = "";
+  if (totalVisual) totalVisual.textContent = "Total: $0.00";
+  if (cambioVisual) cambioVisual.textContent = "Cambio: $0.00";
 }
+
+inputPrecio.addEventListener("input", actualizarCambioVisual);
+inputCantidadViajes.addEventListener("input", actualizarCambioVisual);
+inputPagaCon.addEventListener("input", actualizarCambioVisual);
+tipoRegistro.addEventListener("change", actualizarFormularioSegunTipo);
+inputCliente.addEventListener("input", actualizarVistaTarjetaNueva);
+inputLugar.addEventListener("input", actualizarVistaTarjetaNueva);
 
 function actualizarVisibilidadBusqueda() {
   bloqueFecha.style.display = "none";
@@ -408,26 +550,80 @@ function actualizarVisibilidadBusqueda() {
   if (tipo === "mejorDia") bloqueMejorDia.style.display = "block";
 }
 
-function aplicarFiltroTipo(registros) {
-  const tipo = filtroTipo.value;
+function obtenerNombreHistorial() {
+  const tipo = tipoMejorDia ? tipoMejorDia.value : "";
 
-  if (tipo === "ingreso") {
-    return registros.filter(v => (v.tipo === "viaje" && v.estado === "Pagado") || v.tipo === "soloDinero");
+  if (modoVista === "todo") {
+    return "Historial_Completo";
   }
 
-  if (tipo === "pendiente") {
-    return registros.filter(v => v.tipo === "viaje" && v.estado === "Pendiente");
+  if (modoVista === "fecha" && filtroFecha.value) {
+    return formatearFechaParaNombre(filtroFecha.value);
   }
 
-  if (tipo === "soloDinero") {
-    return registros.filter(v => v.tipo === "soloDinero");
+  if (modoVista === "mejorDia" && filtroFecha.value) {
+    let tipoTexto = "";
+
+    if (tipo === "dinero") {
+      tipoTexto = "[Mas_Dinero]";
+    } else if (tipo === "viajes") {
+      tipoTexto = "[Mas_Viajes]";
+    }
+
+    return `${formatearFechaParaNombre(filtroFecha.value)}_Mejor_Dia${tipoTexto}`;
   }
 
-  if (tipo === "gasto") {
-    return registros.filter(v => v.tipo === "gasto");
+  if (modoVista === "mes" && filtroMes.value) {
+    const [year, month] = filtroMes.value.split("-");
+    return `${obtenerNombreMes(month)}_${year}`;
   }
 
-  return registros;
+  if (modoVista === "rango" && filtroFechaInicio.value && filtroFechaFin.value) {
+    return `${formatearFechaParaNombre(filtroFechaInicio.value)}_al_${formatearFechaParaNombre(filtroFechaFin.value)}`;
+  }
+
+  return `Historial_Hoy_${formatearFechaParaNombre(obtenerFechaHoy())}`;
+}
+
+function obtenerTituloHistorial() {
+  const tipo = tipoMejorDia ? tipoMejorDia.value : "";
+
+  if (modoVista === "todo") {
+    return "HISTORIAL COMPLETO";
+  }
+
+  if (modoVista === "fecha" && filtroFecha.value) {
+    return `HISTORIAL - ${formatearFecha(filtroFecha.value)}`;
+  }
+
+  if (modoVista === "mejorDia" && filtroFecha.value) {
+    let tipoTexto = "";
+
+    if (tipo === "dinero") {
+      tipoTexto = "[MAS DINERO]";
+    } else if (tipo === "viajes") {
+      tipoTexto = "[MAS VIAJES]";
+    }
+
+    return `HISTORIAL - ${formatearFecha(filtroFecha.value)} (MEJOR DIA) ${tipoTexto}`;
+  }
+
+  if (modoVista === "mes" && filtroMes.value) {
+    const [year, month] = filtroMes.value.split("-");
+    return `HISTORIAL - ${obtenerNombreMes(month)} ${year}`;
+  }
+
+  if (modoVista === "rango" && filtroFechaInicio.value && filtroFechaFin.value) {
+    return `HISTORIAL - ${formatearFecha(filtroFechaInicio.value)} al ${formatearFecha(filtroFechaFin.value)}`;
+  }
+
+  return `HISTORIAL - ${formatearFecha(obtenerFechaHoy())}`;
+}
+function actualizarResumen(totalViajes, pendiente, totalGastado, disponible) {
+  document.getElementById("totalViajes").textContent = `Total de viajes: ${totalViajes}`;
+  document.getElementById("totalGastado").textContent = `Total gastado: $${totalGastado.toFixed(2)}`;
+  document.getElementById("disponible").textContent = `Disponible: $${disponible.toFixed(2)}`;
+  document.getElementById("deuda").textContent = `Te deben: $${pendiente.toFixed(2)}`;
 }
 
 function calcularResumen(registros) {
@@ -449,6 +645,7 @@ function calcularResumen(registros) {
 
     if (v.tipo === "viaje") {
       totalViajes++;
+      totalGastado += Number(v.gasto || 0);
 
       if (v.estado === "Pagado") {
         total += Number(v.precio || 0);
@@ -460,71 +657,35 @@ function calcularResumen(registros) {
 
   let disponible = total - totalGastado;
 
-  if (filtroTipo.value === "gasto") {
+  if (filtroTipo && filtroTipo.value === "gasto") {
     disponible = 0;
   }
 
   return { total, pendiente, totalGastado, totalViajes, disponible };
 }
 
-function actualizarResumen(totalViajes, pendiente, totalGastado, disponible) {
-  document.getElementById("totalViajes").textContent = `Total de viajes: ${totalViajes}`;
-  document.getElementById("totalGastado").textContent = `Total gastado: $${totalGastado.toFixed(2)}`;
-  document.getElementById("disponible").textContent = `Disponible: $${disponible.toFixed(2)}`;
-  document.getElementById("deuda").textContent = `Te deben: $${pendiente.toFixed(2)}`;
-}
-
-function crearTituloGrupo(texto, cantidad, grupoId) {
-  const li = document.createElement("li");
-  li.className = "grupo-titulo";
-  li.dataset.abierto = "false";
-
-  li.innerHTML = `
-    <span>${texto} (${cantidad})</span>
-    <span class="flecha-grupo">▼</span>
-  `;
-
-  li.onclick = () => alternarGrupoHistorial(grupoId, li);
-  return li;
-}
-
-function alternarGrupoHistorial(grupoId, tituloGrupo) {
-  const items = document.querySelectorAll(`[data-grupo-historial="${grupoId}"]`);
-  const flecha = tituloGrupo.querySelector(".flecha-grupo");
-  const estaAbierto = tituloGrupo.dataset.abierto === "true";
-
-  items.forEach(item => {
-    item.classList.toggle("item-historial-oculto", estaAbierto);
-  });
-
-  tituloGrupo.dataset.abierto = estaAbierto ? "false" : "true";
-  flecha.textContent = estaAbierto ? "▼" : "▲";
-}
-
 function crearItem(v, numero) {
   const li = document.createElement("li");
   const numeroFormateado = formatearNumero(numero);
-  const lugarTexto = v.lugar ? `<br>Lugar: ${escaparHtml(v.lugar)}` : "";
-  const codigoTexto = v.codigo ? `<br>Código: ${escaparHtml(v.codigo)}` : "";
 
   if (v.tipo === "gasto") {
     li.innerHTML = `
-      <strong>${numeroFormateado}- ${formatearFecha(v.fecha)}</strong><br>
+      <strong>${numeroFormateado}- ${formatearFecha(v.fecha)}</strong> <br>
       ${escaparHtml(v.cliente)} - $${Number(v.gasto || 0).toFixed(2)} <strong>(Gasto)</strong>
     `;
     li.style.background = "#fff3cd";
   } else if (v.tipo === "soloDinero") {
     li.innerHTML = `
-      <strong>${numeroFormateado}- ${formatearFecha(v.fecha)}</strong><br>
+      <strong>${numeroFormateado}- ${formatearFecha(v.fecha)}</strong> <br>
       ${escaparHtml(v.cliente)} - $${Number(v.precio || 0).toFixed(2)} <strong>(Solo dinero)</strong>
     `;
     li.style.background = "#d1ecf1";
   } else {
+    const nombreHistorial = v.lugar || v.cliente;
+
     li.innerHTML = `
-      <strong>${numeroFormateado}- ${formatearFecha(v.fecha)}</strong><br>
-      ${escaparHtml(v.cliente)} - $${Number(v.precio || 0).toFixed(2)} <strong>(${v.estado})</strong>
-      ${lugarTexto}
-      ${codigoTexto}
+      <strong>${numeroFormateado}- ${formatearFecha(v.fecha)}</strong> <br>
+      ${escaparHtml(nombreHistorial)} - $${Number(v.precio).toFixed(2)} <strong>(${v.estado})</strong>
     `;
     li.style.background = v.estado === "Pagado" ? "#d4edda" : "#f8d7da";
   }
@@ -548,6 +709,31 @@ function crearItem(v, numero) {
   return li;
 }
 
+
+function crearTituloGrupo(texto, cantidad, grupoId) {
+  const li = document.createElement("li");
+  li.className = "grupo-titulo";
+  li.innerHTML = `
+    <span>${texto} (${cantidad})</span>
+    <span class="flecha-grupo">▼</span>
+  `;
+  li.onclick = () => alternarGrupoHistorial(grupoId, li);
+  return li;
+}
+
+function alternarGrupoHistorial(grupoId, tituloGrupo) {
+  const items = document.querySelectorAll(`[data-grupo-historial="${grupoId}"]`);
+  const flecha = tituloGrupo.querySelector(".flecha-grupo");
+  const estaAbierto = tituloGrupo.dataset.abierto === "true";
+
+  items.forEach(item => {
+    item.classList.toggle("item-historial-oculto", estaAbierto);
+  });
+
+  tituloGrupo.dataset.abierto = estaAbierto ? "false" : "true";
+  flecha.textContent = estaAbierto ? "▼" : "▲";
+}
+
 function agregarGrupoHistorial(titulo, registros, grupoId) {
   if (registros.length === 0) return;
 
@@ -559,6 +745,28 @@ function agregarGrupoHistorial(titulo, registros, grupoId) {
     item.classList.add("item-historial-oculto");
     lista.appendChild(item);
   });
+}
+
+function aplicarFiltroTipo(registros) {
+  const tipo = filtroTipo ? filtroTipo.value : "todo";
+
+  if (tipo === "ingreso") {
+    return registros.filter(v => (v.tipo === "viaje" && v.estado === "Pagado") || v.tipo === "soloDinero");
+  }
+
+  if (tipo === "pendiente") {
+    return registros.filter(v => v.tipo === "viaje" && v.estado === "Pendiente");
+  }
+
+  if (tipo === "soloDinero") {
+    return registros.filter(v => v.tipo === "soloDinero");
+  }
+
+  if (tipo === "gasto") {
+    return registros.filter(v => v.tipo === "gasto");
+  }
+
+  return registros;
 }
 
 function renderListaAgrupada(registros) {
@@ -582,11 +790,13 @@ function renderListaAgrupada(registros) {
 }
 
 function refrescarVistaActual() {
-  if (modoVista === "fecha" || modoVista === "mejorDia") {
+  if (modoVista === "mejorDia" && filtroFecha.value) {
     filtrarPorFecha();
-  } else if (modoVista === "mes") {
+  } else if (modoVista === "fecha" && filtroFecha.value) {
+    filtrarPorFecha();
+  } else if (modoVista === "mes" && filtroMes.value) {
     filtrarPorMes();
-  } else if (modoVista === "rango") {
+  } else if (modoVista === "rango" && filtroFechaInicio.value && filtroFechaFin.value) {
     filtrarPorRango();
   } else if (modoVista === "todo") {
     mostrarViajes();
@@ -594,92 +804,161 @@ function refrescarVistaActual() {
     mostrarHoy();
   }
 }
+formulario.addEventListener("submit", function (e) {
+  e.preventDefault();
 
-function actualizarPantalla(registros, mensajeVacio) {
-  viajesMostrados = registros;
-  renderListaAgrupada(viajesMostrados);
+  const tipo = tipoRegistro.value;
+  const cliente = inputCliente.value.trim();
+  const lugar = inputLugar.value.trim();
+  const codigo = inputCodigo.value.trim();
+  const precio = parseFloat(inputPrecio.value) || 0;
+  const cantidadViajes = parseInt(inputCantidadViajes.value, 10) || 1;
+  const gasto = parseFloat(inputGasto.value) || 0;
+  const estado = inputEstado.value;
+  const fecha = inputFecha.value;
 
-  const resumen = calcularResumen(aplicarFiltroTipo(viajesMostrados));
-  totalSpan.textContent = resumen.total.toFixed(2);
-  actualizarResumen(resumen.totalViajes, resumen.pendiente, resumen.totalGastado, resumen.disponible);
-
-  if (aplicarFiltroTipo(viajesMostrados).length === 0) {
-    lista.innerHTML = `<div class="mensaje-vacio">${mensajeVacio}</div>`;
-  }
-}
-
-function mostrarHoy() {
-  modoVista = "hoy";
-  const hoy = obtenerFechaHoy();
-  actualizarPantalla(viajes.filter(v => v.fecha === hoy), "No hay registros hoy");
-}
-
-function mostrarViajes() {
-  modoVista = "todo";
-  actualizarPantalla([...viajes], "No hay registros guardados");
-}
-
-function filtrarPorFecha() {
-  const fechaSeleccionada = filtroFecha.value;
-
-  if (!fechaSeleccionada) {
-    alert("Selecciona una fecha");
+  if (!cliente) {
+    alert("Ingrese un cliente o concepto");
     return;
   }
 
-  if (modoVista !== "mejorDia") modoVista = "fecha";
-
-  actualizarPantalla(
-    viajes.filter(v => v.fecha === fechaSeleccionada),
-    "No hay registros en esa fecha"
-  );
-}
-
-function filtrarPorMes() {
-  const mesSeleccionado = filtroMes.value;
-
-  if (!mesSeleccionado) {
-    alert("Selecciona un mes");
+  if (!fecha) {
+    alert("Seleccione una fecha");
     return;
   }
 
-  modoVista = "mes";
+  if (tipo === "nuevoUsuario") {
+    if (!lugar) {
+      alert("Ingrese el lugar del cliente");
+      return;
+    }
 
-  actualizarPantalla(
-    viajes.filter(v => v.fecha && v.fecha.startsWith(mesSeleccionado)),
-    "No hay registros en ese mes"
-  );
-}
+    if (buscarTarjetaPorCodigo(codigo)) {
+      alert("Ese código ya existe. Se generará uno nuevo.");
+      inputCodigo.value = generarCodigoTarjeta();
+      actualizarVistaTarjetaNueva();
+      return;
+    }
 
-function filtrarPorRango() {
-  const fechaInicio = filtroFechaInicio.value;
-  const fechaFin = filtroFechaFin.value;
+    tarjetas.push({
+      id: Date.now(),
+      cliente: capitalizarTexto(cliente),
+      lugar: capitalizarTexto(lugar),
+      codigo,
+      sellos: 0,
+      fechaCreacion: fecha
+    });
 
-  if (!fechaInicio || !fechaFin) {
-    alert("Selecciona fecha inicio y fecha fin");
+    guardar();
+    formulario.reset();
+    tipoRegistro.value = "viaje";
+    inputFecha.value = obtenerFechaHoy();
+    resetearCambioVisual();
+    actualizarFormularioSegunTipo();
+    renderTarjetas();
+    mostrarHoy();
+    alert("Tarjeta de fidelidad creada correctamente");
     return;
   }
 
-  if (fechaInicio > fechaFin) {
-    alert("La fecha inicio no puede ser mayor que la fecha fin");
+  if (tipo === "gasto") {
+    if (gasto <= 0) {
+      alert("Debes ingresar un gasto válido");
+      return;
+    }
+
+    viajes.push({
+      id: Date.now(),
+      tipo: "gasto",
+      cliente: capitalizarTexto(cliente),
+      precio: 0,
+      gasto,
+      estado: "Pagado",
+      fecha
+    });
+
+    guardar();
+    formulario.reset();
+    tipoRegistro.value = "viaje";
+    inputFecha.value = obtenerFechaHoy();
+    inputCantidadViajes.value = 1;
+    resetearCambioVisual();
+    actualizarFormularioSegunTipo();
+    mostrarHoy();
     return;
   }
 
-  modoVista = "rango";
+  if (tipo === "soloDinero") {
+    if (precio <= 0) {
+      alert("Debes ingresar un monto válido");
+      return;
+    }
 
-  actualizarPantalla(
-    viajes.filter(v => v.fecha >= fechaInicio && v.fecha <= fechaFin),
-    "No hay registros en ese rango de fechas"
-  );
-}
+    viajes.push({
+      id: Date.now(),
+      tipo: "soloDinero",
+      cliente: capitalizarTexto(cliente),
+      precio,
+      gasto: 0,
+      estado: "Pagado",
+      fecha
+    });
+
+    guardar();
+    formulario.reset();
+    tipoRegistro.value = "viaje";
+    inputFecha.value = obtenerFechaHoy();
+    inputCantidadViajes.value = 1;
+    resetearCambioVisual();
+    actualizarFormularioSegunTipo();
+    mostrarHoy();
+    return;
+  }
+
+  if (precio >= 0) {
+    if (cantidadViajes < 1) {
+      alert("La cantidad de viajes debe ser mínimo 1");
+      return;
+    }
+
+    for (let i = 0; i < cantidadViajes; i++) {
+      viajes.push({
+        id: Date.now() + i + Math.floor(Math.random() * 1000),
+        tipo: "viaje",
+        cliente: capitalizarTexto(cliente),
+        lugar: capitalizarTexto(lugar),
+        codigo,
+        precio,
+        gasto: 0,
+        estado,
+        fecha
+      });
+    }
+
+    marcarViajesEnTarjeta(codigo, cantidadViajes);
+    guardar();
+    renderTarjetas();
+
+    formulario.reset();
+    tipoRegistro.value = "viaje";
+    inputFecha.value = obtenerFechaHoy();
+    inputCantidadViajes.value = 1;
+    resetearCambioVisual();
+    actualizarFormularioSegunTipo();
+    mostrarHoy();
+    return;
+  }
+
+  alert("Debes ingresar un precio para viaje o solo dinero, o un gasto para guardar gasto");
+});
 
 function buscarMejorDia() {
-  if (viajes.length === 0) {
+  if (!viajes || viajes.length === 0) {
     alert("No hay registros guardados");
     return;
   }
 
-  const tipo = tipoMejorDia.value;
+  const tipo = tipoMejorDia ? tipoMejorDia.value : "";
 
   if (!tipo) {
     alert("Selecciona 'Más viajes' o 'Más dinero'");
@@ -698,7 +977,6 @@ function buscarMejorDia() {
 
     if (v.tipo === "viaje") {
       resumenPorFecha[v.fecha].viajes++;
-
       if (v.estado === "Pagado") {
         resumenPorFecha[v.fecha].dinero += Number(v.precio || 0);
       }
@@ -726,18 +1004,112 @@ function buscarMejorDia() {
       if (actual.dinero > mejor.dinero || (actual.dinero === mejor.dinero && fecha > mejorFecha)) {
         mejorFecha = fecha;
       }
-    }
-
-    if (tipo === "viajes") {
-      if (actual.viajes > mejor.viajes || (actual.viajes === mejor.viajes && fecha > mejorFecha)) {
-        mejorFecha = fecha;
-      }
+    } else if (actual.viajes > mejor.viajes || (actual.viajes === mejor.viajes && fecha > mejorFecha)) {
+      mejorFecha = fecha;
     }
   });
 
   filtroFecha.value = mejorFecha;
   modoVista = "mejorDia";
   filtrarPorFecha();
+}
+function mostrarHoy() {
+  modoVista = "hoy";
+  const hoy = obtenerFechaHoy();
+  viajesMostrados = viajes.filter(v => v.fecha === hoy);
+  renderListaAgrupada(viajesMostrados);
+
+  const resumen = calcularResumen(aplicarFiltroTipo(viajesMostrados));
+  totalSpan.textContent = resumen.total.toFixed(2);
+  actualizarResumen(resumen.totalViajes, resumen.pendiente, resumen.totalGastado, resumen.disponible);
+
+  if (aplicarFiltroTipo(viajesMostrados).length === 0) {
+    lista.innerHTML = '<div class="mensaje-vacio">No hay registros hoy</div>';
+  }
+}
+
+function mostrarViajes() {
+  modoVista = "todo";
+  viajesMostrados = [...viajes];
+  renderListaAgrupada(viajesMostrados);
+
+  const resumen = calcularResumen(aplicarFiltroTipo(viajesMostrados));
+  totalSpan.textContent = resumen.total.toFixed(2);
+  actualizarResumen(resumen.totalViajes, resumen.pendiente, resumen.totalGastado, resumen.disponible);
+
+  if (aplicarFiltroTipo(viajesMostrados).length === 0) {
+    lista.innerHTML = '<div class="mensaje-vacio">No hay registros guardados</div>';
+  }
+}
+
+function filtrarPorFecha() {
+  const fechaSeleccionada = filtroFecha.value;
+
+  if (!fechaSeleccionada) {
+    alert("Selecciona una fecha");
+    return;
+  }
+
+  if (modoVista !== "mejorDia") modoVista = "fecha";
+
+  viajesMostrados = viajes.filter(v => v.fecha === fechaSeleccionada);
+  renderListaAgrupada(viajesMostrados);
+
+  const resumen = calcularResumen(aplicarFiltroTipo(viajesMostrados));
+  totalSpan.textContent = resumen.total.toFixed(2);
+  actualizarResumen(resumen.totalViajes, resumen.pendiente, resumen.totalGastado, resumen.disponible);
+
+  if (aplicarFiltroTipo(viajesMostrados).length === 0) {
+    lista.innerHTML = '<div class="mensaje-vacio">No hay registros en esa fecha</div>';
+  }
+}
+
+function filtrarPorMes() {
+  const mesSeleccionado = filtroMes.value;
+
+  if (!mesSeleccionado) {
+    alert("Selecciona un mes");
+    return;
+  }
+
+  modoVista = "mes";
+  viajesMostrados = viajes.filter(v => v.fecha && v.fecha.startsWith(mesSeleccionado));
+  renderListaAgrupada(viajesMostrados);
+
+  const resumen = calcularResumen(aplicarFiltroTipo(viajesMostrados));
+  totalSpan.textContent = resumen.total.toFixed(2);
+  actualizarResumen(resumen.totalViajes, resumen.pendiente, resumen.totalGastado, resumen.disponible);
+
+  if (aplicarFiltroTipo(viajesMostrados).length === 0) {
+    lista.innerHTML = '<div class="mensaje-vacio">No hay registros en ese mes</div>';
+  }
+}
+
+function filtrarPorRango() {
+  const fechaInicio = filtroFechaInicio.value;
+  const fechaFin = filtroFechaFin.value;
+
+  if (!fechaInicio || !fechaFin) {
+    alert("Selecciona fecha inicio y fecha fin");
+    return;
+  }
+
+  if (fechaInicio > fechaFin) {
+    alert("La fecha inicio no puede ser mayor que la fecha fin");
+    return;
+  }
+
+  modoVista = "rango";
+  viajesMostrados = viajes.filter(v => v.fecha >= fechaInicio && v.fecha <= fechaFin);
+  renderListaAgrupada(viajesMostrados);
+
+  const resumen = calcularResumen(aplicarFiltroTipo(viajesMostrados));
+  totalSpan.textContent = resumen.total.toFixed(2);
+  actualizarResumen(resumen.totalViajes, resumen.pendiente, resumen.totalGastado, resumen.disponible);
+
+  if (aplicarFiltroTipo(viajesMostrados).length === 0) {
+    lista.innerHTML = '<div class="mensaje-vacio">No hay registros en ese rango de fechas</div>';
+  }
 }
 
 function filtrar() {
@@ -759,48 +1131,12 @@ function limpiarFiltro() {
   filtroTipo.value = "todo";
   buscarPor.value = "ninguno";
   tipoMejorDia.value = "";
-
   actualizarVisibilidadBusqueda();
   mostrarHoy();
 }
 
-function obtenerTituloHistorial() {
-  if (modoVista === "todo") return "HISTORIAL COMPLETO";
-
-  if ((modoVista === "fecha" || modoVista === "mejorDia") && filtroFecha.value) {
-    return `HISTORIAL - ${formatearFecha(filtroFecha.value)}`;
-  }
-
-  if (modoVista === "mes" && filtroMes.value) {
-    const [year, month] = filtroMes.value.split("-");
-    return `HISTORIAL - ${obtenerNombreMes(month)} ${year}`;
-  }
-
-  if (modoVista === "rango" && filtroFechaInicio.value && filtroFechaFin.value) {
-    return `HISTORIAL - ${formatearFecha(filtroFechaInicio.value)} al ${formatearFecha(filtroFechaFin.value)}`;
-  }
-
-  return `HISTORIAL - ${formatearFecha(obtenerFechaHoy())}`;
-}
-
-function obtenerNombreHistorial() {
-  if (modoVista === "todo") return "Historial_Completo";
-
-  if ((modoVista === "fecha" || modoVista === "mejorDia") && filtroFecha.value) {
-    return formatearFechaParaNombre(filtroFecha.value);
-  }
-
-  if (modoVista === "mes" && filtroMes.value) {
-    const [year, month] = filtroMes.value.split("-");
-    return `${obtenerNombreMes(month)}_${year}`;
-  }
-
-  if (modoVista === "rango" && filtroFechaInicio.value && filtroFechaFin.value) {
-    return `${formatearFechaParaNombre(filtroFechaInicio.value)}_al_${formatearFechaParaNombre(filtroFechaFin.value)}`;
-  }
-
-  return `Historial_Hoy_${formatearFechaParaNombre(obtenerFechaHoy())}`;
-}
+filtroTipo.addEventListener("change", refrescarVistaActual);
+buscarPor.addEventListener("change", actualizarVisibilidadBusqueda);
 
 function guardarHistorial() {
   if (!viajesMostrados || viajesMostrados.length === 0) {
@@ -954,164 +1290,9 @@ function guardarHistorial() {
   }, 500);
 }
 
-formulario.addEventListener("submit", function (e) {
-  e.preventDefault();
-
-  const tipo = tipoRegistro.value;
-  const cliente = inputCliente.value.trim();
-  const lugar = inputLugar.value.trim();
-  const codigo = inputCodigo.value.trim();
-  const precio = parseFloat(inputPrecio.value) || 0;
-  const cantidadViajes = parseInt(inputCantidadViajes.value, 10) || 1;
-  const gasto = parseFloat(inputGasto.value) || 0;
-  const estado = inputEstado.value;
-  const fecha = inputFecha.value;
-
-  if (!cliente) {
-    alert("Ingrese un cliente o concepto");
-    return;
-  }
-
-  if (!fecha) {
-    alert("Seleccione una fecha");
-    return;
-  }
-
-  if (tipo === "nuevoUsuario") {
-    if (!lugar) {
-      alert("Ingrese el lugar del cliente");
-      return;
-    }
-
-    if (buscarTarjetaPorCodigo(codigo)) {
-      alert("Ese código ya existe. Se generará uno nuevo.");
-      inputCodigo.value = generarCodigoTarjeta();
-      actualizarVistaTarjetaNueva();
-      return;
-    }
-
-    tarjetas.push({
-      id: Date.now(),
-      cliente: capitalizarTexto(cliente),
-      lugar: capitalizarTexto(lugar),
-      codigo,
-      sellos: 0,
-      fechaCreacion: fecha
-    });
-
-    guardar();
-
-    formulario.reset();
-    tipoRegistro.value = "viaje";
-    inputFecha.value = obtenerFechaHoy();
-    resetearCambioVisual();
-    actualizarFormularioSegunTipo();
-    renderTarjetas();
-    mostrarHoy();
-
-    alert("Tarjeta de fidelidad creada correctamente");
-    return;
-  }
-
-  if (tipo === "gasto") {
-    if (gasto <= 0) {
-      alert("Debes ingresar un gasto válido");
-      return;
-    }
-
-    viajes.push({
-      id: Date.now(),
-      tipo: "gasto",
-      cliente: capitalizarTexto(cliente),
-      precio: 0,
-      gasto,
-      estado: "Pagado",
-      fecha
-    });
-
-    guardar();
-
-    formulario.reset();
-    tipoRegistro.value = "viaje";
-    inputFecha.value = obtenerFechaHoy();
-    resetearCambioVisual();
-    actualizarFormularioSegunTipo();
-    mostrarHoy();
-    return;
-  }
-
-  if (tipo === "soloDinero") {
-    if (precio <= 0) {
-      alert("Debes ingresar un monto válido");
-      return;
-    }
-
-    viajes.push({
-      id: Date.now(),
-      tipo: "soloDinero",
-      cliente: capitalizarTexto(cliente),
-      precio,
-      gasto: 0,
-      estado: "Pagado",
-      fecha
-    });
-
-    guardar();
-
-    formulario.reset();
-    tipoRegistro.value = "viaje";
-    inputFecha.value = obtenerFechaHoy();
-    resetearCambioVisual();
-    actualizarFormularioSegunTipo();
-    mostrarHoy();
-    return;
-  }
-
-  if (cantidadViajes < 1) {
-    alert("La cantidad de viajes debe ser mínimo 1");
-    return;
-  }
-
-  for (let i = 0; i < cantidadViajes; i++) {
-    viajes.push({
-      id: Date.now() + i + Math.floor(Math.random() * 1000),
-      tipo: "viaje",
-      cliente: capitalizarTexto(cliente),
-      lugar: capitalizarTexto(lugar),
-      codigo,
-      precio,
-      gasto: 0,
-      estado,
-      fecha
-    });
-  }
-
-  marcarViajesEnTarjeta(codigo, cantidadViajes);
-  guardar();
-  renderTarjetas();
-
-  formulario.reset();
-  tipoRegistro.value = "viaje";
-  inputFecha.value = obtenerFechaHoy();
-  resetearCambioVisual();
-  actualizarFormularioSegunTipo();
-  mostrarHoy();
-});
-
-inputPrecio.addEventListener("input", actualizarCambioVisual);
-inputCantidadViajes.addEventListener("input", actualizarCambioVisual);
-inputPagaCon.addEventListener("input", actualizarCambioVisual);
-tipoRegistro.addEventListener("change", actualizarFormularioSegunTipo);
-inputCliente.addEventListener("input", actualizarVistaTarjetaNueva);
-inputLugar.addEventListener("input", actualizarVistaTarjetaNueva);
-filtroTipo.addEventListener("change", refrescarVistaActual);
-buscarPor.addEventListener("change", actualizarVisibilidadBusqueda);
-
-inputFecha.value = obtenerFechaHoy();
-
-resetearCambioVisual();
 actualizarVisibilidadBusqueda();
 actualizarFormularioSegunTipo();
 aplicarDatosDesdeQr();
 mostrarHoy();
 renderTarjetas();
+resetearCambioVisual();
