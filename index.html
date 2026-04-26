@@ -14,7 +14,7 @@
     }
 
     .container {
-      max-width: 400px;
+      max-width: 440px;
       margin: auto;
       background: white;
       padding: 20px;
@@ -66,11 +66,16 @@
       cursor: pointer;
     }
 
-    .btn-eliminar:hover {
-      background: #b02a37;
+    .btn-secundario {
+      background: #6c757d;
+      font-size: 12px;
+      padding: 6px 10px;
+      width: auto;
+      margin-right: 6px;
     }
 
-    #lista {
+    #lista,
+    #listaTarjetas {
       padding-left: 0;
     }
 
@@ -109,14 +114,88 @@
       background: #e9ecef;
       color: #333;
       list-style: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      user-select: none;
     }
 
-    .bloque-oculto {
+    .item-historial-oculto {
       display: none;
     }
 
+    .bloque-oculto,
     .campo-oculto {
       display: none;
+    }
+
+    .tarjeta-fidelidad {
+      background: #eef7ff;
+      border: 1px solid #b8ddff;
+      border-radius: 8px;
+      padding: 12px;
+      margin-top: 10px;
+    }
+
+    .tarjeta-fidelidad h4 {
+      margin: 0 0 8px;
+    }
+
+    .sellos {
+      font-size: 23px;
+      letter-spacing: 2px;
+      line-height: 1.6;
+      word-break: break-word;
+    }
+
+    .qr {
+      width: 140px;
+      height: 140px;
+      display: block;
+      margin-top: 10px;
+      background: white;
+      border: 1px solid #ddd;
+    }
+
+    .enlace-qr {
+      display: block;
+      margin-top: 8px;
+      color: #005a9c;
+      font-size: 12px;
+      word-break: break-all;
+    }
+
+    .encabezado-desplegable {
+      width: 100%;
+      margin-top: 18px;
+      padding: 12px;
+      background: #e9ecef;
+      color: #333;
+      border: none;
+      border-radius: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 16px;
+      font-weight: bold;
+      text-align: left;
+    }
+
+    .encabezado-desplegable span {
+      width: auto;
+    }
+
+    .flecha-desplegable {
+      font-size: 18px;
+    }
+
+    .contenido-desplegable {
+      display: none;
+    }
+
+    .contenido-desplegable.abierto {
+      display: block;
     }
   </style>
 </head>
@@ -128,11 +207,28 @@
     <form id="formulario">
       <select id="tipoRegistro">
         <option value="viaje">Viaje</option>
+        <option value="nuevoUsuario">Nuevo usuario</option>
         <option value="soloDinero">Solo dinero</option>
         <option value="gasto">Gasto</option>
       </select>
 
       <input type="text" id="cliente" placeholder="Cliente o concepto" required>
+
+      <div id="bloqueLugarCodigo">
+        <input type="text" id="lugar" placeholder="Lugar">
+        <input type="text" id="codigo" placeholder="Código automático" readonly>
+      </div>
+
+      <div id="bloqueFidelidadNuevo" class="campo-oculto">
+        <div class="tarjeta-fidelidad">
+          <h4>Tarjeta de Fidelidad</h4>
+          <div>Cliente: <strong id="vistaClienteNuevo">Nuevo cliente</strong></div>
+          <div>Lugar: <strong id="vistaLugarNuevo">Sin lugar</strong></div>
+          <div>Código: <strong id="vistaCodigoNuevo">001</strong></div>
+          <div>Número de viajes:</div>
+          <div id="vistaSellosNuevo" class="sellos"></div>
+        </div>
+      </div>
 
       <input type="number" id="precio" placeholder="Precio o ingreso" min="0" step="0.01">
 
@@ -162,6 +258,15 @@
 
       <button type="submit">Guardar Registro</button>
     </form>
+
+    <button type="button" class="encabezado-desplegable" onclick="alternarTarjetas()">
+      <span>Tarjetas de Fidelidad</span>
+      <span id="flechaTarjetas" class="flecha-desplegable">▼</span>
+    </button>
+
+    <div id="contenedorTarjetas" class="contenido-desplegable">
+      <ul id="listaTarjetas"></ul>
+    </div>
 
     <h3>Filtrar búsquedas</h3>
 
