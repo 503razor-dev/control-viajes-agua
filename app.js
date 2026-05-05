@@ -1,6 +1,6 @@
 const MAX_SELLOS = 10;
 const URL_APP_PUBLICADA = "https://503razor-dev.github.io/control-viajes-agua/";
-const CLAVE_ACCESO = "2549";
+const CLAVE_ACCESO = "2649";
 
 function obtenerFechaHoy() {
   const hoy = new Date();
