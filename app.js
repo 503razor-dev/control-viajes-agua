@@ -1,5 +1,6 @@
-const MAX_SELLOS = 9;
+const MAX_SELLOS = 10;
 const URL_APP_PUBLICADA = "https://503razor-dev.github.io/control-viajes-agua/";
+const CLAVE_ACCESO = "2549";
 
 function obtenerFechaHoy() {
   const hoy = new Date();
@@ -69,6 +70,10 @@ let viajesMostrados = [];
 let modoVista = "hoy";
 
 const formulario = document.getElementById("formulario");
+const pantallaAcceso = document.getElementById("pantallaAcceso");
+const appPrincipal = document.getElementById("appPrincipal");
+const inputClaveAcceso = document.getElementById("claveAcceso");
+const mensajeAcceso = document.getElementById("mensajeAcceso");
 const lista = document.getElementById("lista");
 const listaTarjetas = document.getElementById("listaTarjetas");
 const contenedorTarjetas = document.getElementById("contenedorTarjetas");
@@ -115,6 +120,39 @@ const bloqueEstado = document.getElementById("bloqueEstado");
 
 if (inputFecha) {
   inputFecha.value = obtenerFechaHoy();
+}
+
+function iniciarApp() {
+  resetearCambioVisual();
+  actualizarVisibilidadBusqueda();
+  actualizarFormularioSegunTipo();
+  aplicarDatosDesdeQr();
+  mostrarHoy();
+  renderTarjetas();
+}
+
+function validarAcceso() {
+  const clave = inputClaveAcceso.value.trim();
+
+  if (clave !== CLAVE_ACCESO) {
+    mensajeAcceso.textContent = "Clave incorrecta";
+    inputClaveAcceso.value = "";
+    inputClaveAcceso.focus();
+    return;
+  }
+
+  sessionStorage.setItem("accesoPermitido", "true");
+  pantallaAcceso.style.display = "none";
+  appPrincipal.style.display = "block";
+  iniciarApp();
+}
+
+if (inputClaveAcceso) {
+  inputClaveAcceso.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      validarAcceso();
+    }
+  });
 }
 
 function guardar() {
@@ -186,6 +224,7 @@ async function compartirQr(codigo) {
 
   window.open(urlQr, "_blank");
 }
+
 function abrirPdfQr(codigo) {
   const tarjeta = buscarTarjetaPorCodigo(codigo);
   if (!tarjeta) return;
@@ -334,9 +373,9 @@ function renderTarjetas() {
       <div>Código: <strong>${escaparHtml(tarjeta.codigo)}</strong></div>
       <div>Número de viajes:</div>
       <div class="sellos">${dibujarSellos(tarjeta.sellos)}</div>
+      ${tarjeta.premioDisponible ? '<div class="cambio-visual">Premio disponible: viaje gratis</div>' : ""}
       <img class="qr" src="${obtenerUrlQr(tarjeta)}" alt="QR de ${escaparHtml(tarjeta.cliente)}">
       <a class="enlace-qr" href="${urlTarjeta}">${urlTarjeta}</a>
-      
     `;
 
     const btnUsar = document.createElement("button");
@@ -351,6 +390,13 @@ function renderTarjetas() {
     btnCompartir.textContent = "PDF QR";
     btnCompartir.onclick = () => abrirPdfQr(tarjeta.codigo);
 
+    const btnPremio = document.createElement("button");
+    btnPremio.type = "button";
+    btnPremio.className = "btn-secundario";
+    btnPremio.textContent = "Canjear premio";
+    btnPremio.onclick = () => canjearPremio(tarjeta.codigo);
+    btnPremio.style.display = tarjeta.premioDisponible ? "inline-block" : "none";
+
     const btnEliminar = document.createElement("button");
     btnEliminar.type = "button";
     btnEliminar.className = "btn-eliminar";
@@ -359,6 +405,7 @@ function renderTarjetas() {
 
     li.appendChild(btnUsar);
     li.appendChild(btnCompartir);
+    li.appendChild(btnPremio);
     li.appendChild(btnEliminar);
     listaTarjetas.appendChild(li);
   });
@@ -378,8 +425,43 @@ function marcarViajesEnTarjeta(codigo, cantidad) {
   tarjeta.sellos = Math.min(MAX_SELLOS, Number(tarjeta.sellos || 0) + Number(cantidad || 1));
 
   if (tarjeta.sellos >= MAX_SELLOS) {
-    alert(`La tarjeta de ${tarjeta.cliente} ya completó ${MAX_SELLOS} viajes. Tiene regalo 🎁`);
+    tarjeta.premioDisponible = true;
+    alert(`La tarjeta de ${tarjeta.cliente} ya completó ${MAX_SELLOS} viajes. El viaje número 11 será gratis.`);
   }
+}
+
+function canjearPremio(codigo) {
+  const tarjeta = buscarTarjetaPorCodigo(codigo);
+  if (!tarjeta) return;
+
+  if (!tarjeta.premioDisponible) {
+    alert("Esta tarjeta todavía no tiene premio disponible.");
+    return;
+  }
+
+  const confirmar = confirm(`¿Canjear viaje gratis para ${tarjeta.cliente}?`);
+  if (!confirmar) return;
+
+  viajes.push({
+    id: Date.now() + Math.floor(Math.random() * 1000),
+    tipo: "viaje",
+    cliente: tarjeta.cliente,
+    lugar: tarjeta.lugar,
+    codigo: tarjeta.codigo,
+    precio: 0,
+    gasto: 0,
+    estado: "Pagado",
+    fecha: obtenerFechaHoy(),
+    premio: true
+  });
+
+  tarjeta.sellos = 0;
+  tarjeta.premioDisponible = false;
+
+  guardar();
+  renderTarjetas();
+  refrescarVistaActual();
+  alert("Premio canjeado. La tarjeta volvió a 0 viajes.");
 }
 
 function aplicarDatosDesdeQr() {
@@ -397,12 +479,12 @@ function aplicarDatosDesdeQr() {
   inputCodigo.value = codigo || "";
   inputFecha.value = obtenerFechaHoy();
 }
+
 function actualizarFormularioSegunTipo() {
   const tipo = tipoRegistro.value;
 
   if (tipo === "viaje") {
     inputCliente.placeholder = "Cliente";
-
     inputPrecio.style.display = "block";
     bloqueLugarCodigo.style.display = "none";
     bloqueCantidadViajes.style.display = "block";
@@ -410,14 +492,12 @@ function actualizarFormularioSegunTipo() {
     bloqueEstado.style.display = "block";
     bloqueGasto.style.display = "none";
     bloqueFidelidadNuevo.style.display = "none";
-
     inputPrecio.placeholder = "Precio o ingreso";
     inputGasto.value = "";
   }
 
   if (tipo === "nuevoUsuario") {
     inputCliente.placeholder = "Cliente";
-
     inputPrecio.style.display = "none";
     bloqueLugarCodigo.style.display = "block";
     bloqueCantidadViajes.style.display = "none";
@@ -425,23 +505,19 @@ function actualizarFormularioSegunTipo() {
     bloqueEstado.style.display = "none";
     bloqueGasto.style.display = "none";
     bloqueFidelidadNuevo.style.display = "block";
-
     inputPrecio.value = "";
     inputCantidadViajes.value = 1;
     inputPagaCon.value = "";
     inputEstado.value = "Pagado";
     inputGasto.value = "";
     inputCodigo.value = generarCodigoTarjeta();
-
     totalVisual.textContent = "Total: $0.00";
     cambioVisual.textContent = "Cambio: $0.00";
-
     actualizarVistaTarjetaNueva();
   }
 
   if (tipo === "soloDinero") {
     inputCliente.placeholder = "Concepto del ingreso";
-
     inputPrecio.style.display = "block";
     bloqueLugarCodigo.style.display = "none";
     bloqueCantidadViajes.style.display = "none";
@@ -449,23 +525,19 @@ function actualizarFormularioSegunTipo() {
     bloqueEstado.style.display = "none";
     bloqueGasto.style.display = "none";
     bloqueFidelidadNuevo.style.display = "none";
-
     inputPrecio.placeholder = "Monto del ingreso";
-
     inputLugar.value = "";
     inputCodigo.value = "";
     inputCantidadViajes.value = 1;
     inputPagaCon.value = "";
     inputEstado.value = "Pagado";
     inputGasto.value = "";
-
     totalVisual.textContent = "Total: $0.00";
     cambioVisual.textContent = "Cambio: $0.00";
   }
 
   if (tipo === "gasto") {
     inputCliente.placeholder = "Concepto del gasto";
-
     inputPrecio.style.display = "none";
     bloqueLugarCodigo.style.display = "none";
     bloqueCantidadViajes.style.display = "none";
@@ -473,21 +545,18 @@ function actualizarFormularioSegunTipo() {
     bloqueEstado.style.display = "none";
     bloqueGasto.style.display = "block";
     bloqueFidelidadNuevo.style.display = "none";
-
     inputPrecio.value = "";
     inputLugar.value = "";
     inputCodigo.value = "";
     inputCantidadViajes.value = 1;
     inputPagaCon.value = "";
     inputEstado.value = "Pagado";
-
     totalVisual.textContent = "Total: $0.00";
     cambioVisual.textContent = "Cambio: $0.00";
   }
 
   actualizarCambioVisual();
 }
-
 
 function actualizarCambioVisual() {
   const tipo = tipoRegistro.value;
@@ -553,23 +622,13 @@ function actualizarVisibilidadBusqueda() {
 function obtenerNombreHistorial() {
   const tipo = tipoMejorDia ? tipoMejorDia.value : "";
 
-  if (modoVista === "todo") {
-    return "Historial_Completo";
-  }
-
-  if (modoVista === "fecha" && filtroFecha.value) {
-    return formatearFechaParaNombre(filtroFecha.value);
-  }
+  if (modoVista === "todo") return "Historial_Completo";
+  if (modoVista === "fecha" && filtroFecha.value) return formatearFechaParaNombre(filtroFecha.value);
 
   if (modoVista === "mejorDia" && filtroFecha.value) {
     let tipoTexto = "";
-
-    if (tipo === "dinero") {
-      tipoTexto = "[Mas_Dinero]";
-    } else if (tipo === "viajes") {
-      tipoTexto = "[Mas_Viajes]";
-    }
-
+    if (tipo === "dinero") tipoTexto = "[Mas_Dinero]";
+    if (tipo === "viajes") tipoTexto = "[Mas_Viajes]";
     return `${formatearFechaParaNombre(filtroFecha.value)}_Mejor_Dia${tipoTexto}`;
   }
 
@@ -588,23 +647,13 @@ function obtenerNombreHistorial() {
 function obtenerTituloHistorial() {
   const tipo = tipoMejorDia ? tipoMejorDia.value : "";
 
-  if (modoVista === "todo") {
-    return "HISTORIAL COMPLETO";
-  }
-
-  if (modoVista === "fecha" && filtroFecha.value) {
-    return `HISTORIAL - ${formatearFecha(filtroFecha.value)}`;
-  }
+  if (modoVista === "todo") return "HISTORIAL COMPLETO";
+  if (modoVista === "fecha" && filtroFecha.value) return `HISTORIAL - ${formatearFecha(filtroFecha.value)}`;
 
   if (modoVista === "mejorDia" && filtroFecha.value) {
     let tipoTexto = "";
-
-    if (tipo === "dinero") {
-      tipoTexto = "[MAS DINERO]";
-    } else if (tipo === "viajes") {
-      tipoTexto = "[MAS VIAJES]";
-    }
-
+    if (tipo === "dinero") tipoTexto = "[MAS DINERO]";
+    if (tipo === "viajes") tipoTexto = "[MAS VIAJES]";
     return `HISTORIAL - ${formatearFecha(filtroFecha.value)} (MEJOR DIA) ${tipoTexto}`;
   }
 
@@ -619,6 +668,7 @@ function obtenerTituloHistorial() {
 
   return `HISTORIAL - ${formatearFecha(obtenerFechaHoy())}`;
 }
+
 function actualizarResumen(totalViajes, pendiente, totalGastado, disponible) {
   document.getElementById("totalViajes").textContent = `Total de viajes: ${totalViajes}`;
   document.getElementById("totalGastado").textContent = `Total gastado: $${totalGastado.toFixed(2)}`;
@@ -682,10 +732,12 @@ function crearItem(v, numero) {
     li.style.background = "#d1ecf1";
   } else {
     const nombreHistorial = v.lugar || v.cliente;
+    const premioTexto = v.premio ? "<br>Premio de fidelidad" : "";
 
     li.innerHTML = `
       <strong>${numeroFormateado}- ${formatearFecha(v.fecha)}</strong> <br>
       ${escaparHtml(nombreHistorial)} - $${Number(v.precio).toFixed(2)} <strong>(${v.estado})</strong>
+      ${premioTexto}
     `;
     li.style.background = v.estado === "Pagado" ? "#d4edda" : "#f8d7da";
   }
@@ -708,7 +760,6 @@ function crearItem(v, numero) {
 
   return li;
 }
-
 
 function crearTituloGrupo(texto, cantidad, grupoId) {
   const li = document.createElement("li");
@@ -804,6 +855,7 @@ function refrescarVistaActual() {
     mostrarHoy();
   }
 }
+
 formulario.addEventListener("submit", function (e) {
   e.preventDefault();
 
@@ -1013,6 +1065,7 @@ function buscarMejorDia() {
   modoVista = "mejorDia";
   filtrarPorFecha();
 }
+
 function mostrarHoy() {
   modoVista = "hoy";
   const hoy = obtenerFechaHoy();
@@ -1290,9 +1343,11 @@ function guardarHistorial() {
   }, 500);
 }
 
-actualizarVisibilidadBusqueda();
-actualizarFormularioSegunTipo();
-aplicarDatosDesdeQr();
-mostrarHoy();
-renderTarjetas();
-resetearCambioVisual();
+if (sessionStorage.getItem("accesoPermitido") === "true") {
+  pantallaAcceso.style.display = "none";
+  appPrincipal.style.display = "block";
+  iniciarApp();
+} else {
+  pantallaAcceso.style.display = "block";
+  appPrincipal.style.display = "none";
+}
