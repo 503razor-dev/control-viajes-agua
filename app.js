@@ -181,6 +181,23 @@ function dibujarSellos(cantidad) {
   return sellos.join("");
 }
 
+const PREMIOS_FIDELIDAD = [
+  "mitad de precio",
+  "viaje a $2",
+  "viaje gratis"
+];
+
+function obtenerPremioActual(tarjeta) {
+  if (tarjeta.premioTipo) return tarjeta.premioTipo;
+
+  const ciclosPremio = Number(tarjeta.ciclosPremio || 0);
+  return PREMIOS_FIDELIDAD[ciclosPremio % PREMIOS_FIDELIDAD.length];
+}
+
+function obtenerTextoPremio(tarjeta) {
+  return `Premio disponible: ${obtenerPremioActual(tarjeta)}`;
+}
+
 function buscarTarjetaPorCodigo(codigo) {
   return tarjetas.find(tarjeta => tarjeta.codigo === codigo);
 }
@@ -332,8 +349,7 @@ function usarTarjeta(codigo) {
 
   tipoRegistro.value = "viaje";
   actualizarFormularioSegunTipo();
-  inputCliente.value = tarjeta.cliente;
-  inputLugar.value = tarjeta.lugar;
+  inputCliente.value = tarjeta.cliente;  inputLugar.value = tarjeta.lugar;
   inputCodigo.value = tarjeta.codigo;
   inputFecha.value = obtenerFechaHoy();
   actualizarCambioVisual();
@@ -373,7 +389,7 @@ function renderTarjetas() {
       <div>Código: <strong>${escaparHtml(tarjeta.codigo)}</strong></div>
       <div>Número de viajes:</div>
       <div class="sellos">${dibujarSellos(tarjeta.sellos)}</div>
-      ${tarjeta.premioDisponible ? '<div class="cambio-visual">Premio disponible: viaje gratis</div>' : ""}
+      ${tarjeta.premioDisponible ? `<div class="cambio-visual">${obtenerTextoPremio(tarjeta)}</div>` : ""}
       <img class="qr" src="${obtenerUrlQr(tarjeta)}" alt="QR de ${escaparHtml(tarjeta.cliente)}">
       <a class="enlace-qr" href="${urlTarjeta}">${urlTarjeta}</a>
     `;
@@ -424,9 +440,10 @@ function marcarViajesEnTarjeta(codigo, cantidad) {
 
   tarjeta.sellos = Math.min(MAX_SELLOS, Number(tarjeta.sellos || 0) + Number(cantidad || 1));
 
-  if (tarjeta.sellos >= MAX_SELLOS) {
+  if (tarjeta.sellos >= MAX_SELLOS && !tarjeta.premioDisponible) {
+    tarjeta.premioTipo = obtenerPremioActual(tarjeta);
     tarjeta.premioDisponible = true;
-    alert(`La tarjeta de ${tarjeta.cliente} ya completó ${MAX_SELLOS} viajes. El viaje número 11 será gratis.`);
+    alert(`La tarjeta de ${tarjeta.cliente} completó ${MAX_SELLOS} viajes. ${obtenerTextoPremio(tarjeta)}.`);
   }
 }
 
@@ -439,7 +456,23 @@ function canjearPremio(codigo) {
     return;
   }
 
-  const confirmar = confirm(`¿Canjear viaje gratis para ${tarjeta.cliente}?`);
+  const premio = obtenerPremioActual(tarjeta);
+  let precio = 0;
+
+  if (premio === "mitad de precio") {
+    const precioNormal = Number(prompt("Ingrese el precio normal del viaje para aplicar la mitad de precio:"));
+
+    if (!precioNormal || precioNormal <= 0) {
+      alert("Ingrese un precio válido para aplicar el premio.");
+      return;
+    }
+
+    precio = precioNormal / 2;
+  } else if (premio === "viaje a $2") {
+    precio = 2;
+  }
+
+  const confirmar = confirm(`¿Canjear ${premio} para ${tarjeta.cliente}?`);
   if (!confirmar) return;
 
   viajes.push({
@@ -448,20 +481,23 @@ function canjearPremio(codigo) {
     cliente: tarjeta.cliente,
     lugar: tarjeta.lugar,
     codigo: tarjeta.codigo,
-    precio: 0,
+    precio,
     gasto: 0,
     estado: "Pagado",
     fecha: obtenerFechaHoy(),
-    premio: true
+    premio: true,
+    tipoPremio: premio
   });
 
   tarjeta.sellos = 0;
   tarjeta.premioDisponible = false;
+  tarjeta.premioTipo = "";
+  tarjeta.ciclosPremio = Number(tarjeta.ciclosPremio || 0) + 1;
 
   guardar();
   renderTarjetas();
   refrescarVistaActual();
-  alert("Premio canjeado. La tarjeta volvió a 0 viajes.");
+  alert(`Premio canjeado: ${premio}. La tarjeta volvió a 0 viajes.`);
 }
 
 function aplicarDatosDesdeQr() {
@@ -512,8 +548,7 @@ function actualizarFormularioSegunTipo() {
     inputGasto.value = "";
     inputCodigo.value = generarCodigoTarjeta();
     totalVisual.textContent = "Total: $0.00";
-    cambioVisual.textContent = "Cambio: $0.00";
-    actualizarVistaTarjetaNueva();
+    cambioVisual.textContent = "Cambio: $0.00";    actualizarVistaTarjetaNueva();
   }
 
   if (tipo === "soloDinero") {
@@ -712,9 +747,7 @@ function calcularResumen(registros) {
   }
 
   return { total, pendiente, totalGastado, totalViajes, disponible };
-}
-
-function crearItem(v, numero) {
+}function crearItem(v, numero) {
   const li = document.createElement("li");
   const numeroFormateado = formatearNumero(numero);
 
@@ -898,6 +931,9 @@ formulario.addEventListener("submit", function (e) {
       lugar: capitalizarTexto(lugar),
       codigo,
       sellos: 0,
+      ciclosPremio: 0,
+      premioDisponible: false,
+      premioTipo: "",
       fechaCreacion: fecha
     });
 
@@ -909,8 +945,7 @@ formulario.addEventListener("submit", function (e) {
     actualizarFormularioSegunTipo();
     renderTarjetas();
     mostrarHoy();
-    alert("Tarjeta de fidelidad creada correctamente");
-    return;
+    alert("Tarjeta de fidelidad creada correctamente");    return;
   }
 
   if (tipo === "gasto") {
@@ -1109,8 +1144,7 @@ function filtrarPorFecha() {
   renderListaAgrupada(viajesMostrados);
 
   const resumen = calcularResumen(aplicarFiltroTipo(viajesMostrados));
-  totalSpan.textContent = resumen.total.toFixed(2);
-  actualizarResumen(resumen.totalViajes, resumen.pendiente, resumen.totalGastado, resumen.disponible);
+  totalSpan.textContent = resumen.total.toFixed(2);  actualizarResumen(resumen.totalViajes, resumen.pendiente, resumen.totalGastado, resumen.disponible);
 
   if (aplicarFiltroTipo(viajesMostrados).length === 0) {
     lista.innerHTML = '<div class="mensaje-vacio">No hay registros en esa fecha</div>';
