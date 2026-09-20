@@ -26,11 +26,7 @@ function formatearFechaParaNombre(fecha) {
   if (!fecha) return "Sin_fecha";
 
   const partes = fecha.split("-");
-  const year = partes[0];
-  const month = partes[1];
-  const day = partes[2];
-
-  return `${day}_${obtenerNombreMes(month)}_${year}`;
+  return `${partes[2]}_${obtenerNombreMes(partes[1])}_${partes[0]}`;
 }
 
 function formatearNumero(numero) {
@@ -39,11 +35,12 @@ function formatearNumero(numero) {
 
 function capitalizarTexto(texto) {
   if (!texto) return "";
+
   return texto
     .trim()
     .split(/\s+/)
     .filter(p => p !== "")
-    .map((palabra) => palabra.charAt(0).toUpperCase() + palabra.slice(1).toLowerCase())
+    .map(palabra => palabra.charAt(0).toUpperCase() + palabra.slice(1).toLowerCase())
     .join(" ");
 }
 
@@ -52,6 +49,7 @@ function obtenerNombreMes(numeroMes) {
     "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
     "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
   ];
+
   return meses[parseInt(numeroMes, 10) - 1];
 }
 
@@ -66,6 +64,7 @@ function escaparHtml(texto) {
 
 let viajes = JSON.parse(localStorage.getItem("viajes")) || [];
 let tarjetas = JSON.parse(localStorage.getItem("tarjetasFidelidad")) || [];
+let cuentasPendientes = JSON.parse(localStorage.getItem("cuentasPendientes")) || [];
 let viajesMostrados = [];
 let modoVista = "hoy";
 
@@ -148,8 +147,8 @@ function validarAcceso() {
 }
 
 if (inputClaveAcceso) {
-  inputClaveAcceso.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") {
+  inputClaveAcceso.addEventListener("keydown", evento => {
+    if (evento.key === "Enter") {
       validarAcceso();
     }
   });
@@ -158,6 +157,7 @@ if (inputClaveAcceso) {
 function guardar() {
   localStorage.setItem("viajes", JSON.stringify(viajes));
   localStorage.setItem("tarjetasFidelidad", JSON.stringify(tarjetas));
+  localStorage.setItem("cuentasPendientes", JSON.stringify(cuentasPendientes));
 }
 
 function generarCodigoTarjeta() {
@@ -198,6 +198,90 @@ function obtenerTextoPremio(tarjeta) {
   return `Premio disponible: ${obtenerPremioActual(tarjeta)}`;
 }
 
+function normalizarClienteKey(cliente) {
+  return String(cliente || "").trim().toLocaleLowerCase("es");
+}
+
+function obtenerCuentaPendiente(cliente) {
+  const clave = normalizarClienteKey(cliente);
+  return cuentasPendientes.find(cuenta => cuenta.clienteKey === clave);
+}
+
+function obtenerViajesPendientesCliente(cliente, registros = viajes) {
+  const clave = normalizarClienteKey(cliente);
+
+  return registros.filter(registro =>
+    registro.tipo === "viaje" &&
+    registro.estado === "Pendiente" &&
+    normalizarClienteKey(registro.cliente) === clave
+  );
+}
+
+function calcularTotalPendienteCliente(cliente, registros = viajes) {
+  return obtenerViajesPendientesCliente(cliente, registros)
+    .reduce((total, viaje) => total + Number(viaje.precio || 0), 0);
+}
+
+function obtenerTotalPendienteCliente(cliente, registros = viajes) {
+  const cuenta = obtenerCuentaPendiente(cliente);
+  return cuenta ? Number(cuenta.total || 0) : calcularTotalPendienteCliente(cliente, registros);
+}
+
+function sumarMontoPendiente(cliente, monto) {
+  let cuenta = obtenerCuentaPendiente(cliente);
+
+  if (!cuenta) {
+    cuenta = {
+      clienteKey: normalizarClienteKey(cliente),
+      total: calcularTotalPendienteCliente(cliente)
+    };
+
+    cuentasPendientes.push(cuenta);
+    return;
+  }
+
+  cuenta.total = Number(cuenta.total || 0) + Number(monto || 0);
+}
+
+function guardarTotalPendienteCliente(cliente, total) {
+  let cuenta = obtenerCuentaPendiente(cliente);
+
+  if (!cuenta) {
+    cuenta = {
+      clienteKey: normalizarClienteKey(cliente),
+      total: calcularTotalPendienteCliente(cliente)
+    };
+
+    cuentasPendientes.push(cuenta);
+  }
+
+  cuenta.total = Math.max(0, Number(total) || 0);
+  guardar();
+}
+
+function eliminarCuentaPendiente(cliente) {
+  const clave = normalizarClienteKey(cliente);
+  cuentasPendientes = cuentasPendientes.filter(cuenta => cuenta.clienteKey !== clave);
+}function actualizarCamposPendiente() {
+  const esViajePendiente =
+    tipoRegistro.value === "viaje" &&
+    inputEstado.value === "Pendiente";
+
+  if (esViajePendiente) {
+    bloqueLugarCodigo.style.display = "block";
+    inputLugar.style.display = "block";
+    inputCodigo.style.display = "none";
+    inputLugar.required = true;
+    return;
+  }
+
+  inputLugar.required = false;
+
+  if (tipoRegistro.value === "viaje") {
+    bloqueLugarCodigo.style.display = "none";
+  }
+}
+
 function buscarTarjetaPorCodigo(codigo) {
   return tarjetas.find(tarjeta => tarjeta.codigo === codigo);
 }
@@ -226,7 +310,9 @@ async function compartirQr(codigo) {
   try {
     const respuesta = await fetch(urlQr);
     const blob = await respuesta.blob();
-    const archivo = new File([blob], `QR_${tarjeta.codigo}.png`, { type: "image/png" });
+    const archivo = new File([blob], `QR_${tarjeta.codigo}.png`, {
+      type: "image/png"
+    });
 
     if (navigator.canShare && navigator.canShare({ files: [archivo] })) {
       await navigator.share({
@@ -349,7 +435,8 @@ function usarTarjeta(codigo) {
 
   tipoRegistro.value = "viaje";
   actualizarFormularioSegunTipo();
-  inputCliente.value = tarjeta.cliente;  inputLugar.value = tarjeta.lugar;
+  inputCliente.value = tarjeta.cliente;
+  inputLugar.value = tarjeta.lugar;
   inputCodigo.value = tarjeta.codigo;
   inputFecha.value = obtenerFechaHoy();
   actualizarCambioVisual();
@@ -363,7 +450,7 @@ function eliminarTarjeta(codigo) {
   const confirmar = confirm(`¿Eliminar la tarjeta de ${tarjeta.cliente}?`);
   if (!confirmar) return;
 
-  tarjetas = tarjetas.filter(t => t.codigo !== codigo);
+  tarjetas = tarjetas.filter(tarjetaActual => tarjetaActual.codigo !== codigo);
   guardar();
   renderTarjetas();
 }
@@ -376,7 +463,7 @@ function renderTarjetas() {
     return;
   }
 
-  tarjetas.forEach((tarjeta) => {
+  tarjetas.forEach(tarjeta => {
     const li = document.createElement("li");
     li.className = "tarjeta-fidelidad";
 
@@ -438,16 +525,17 @@ function marcarViajesEnTarjeta(codigo, cantidad) {
   const tarjeta = buscarTarjetaPorCodigo(codigo);
   if (!tarjeta) return;
 
-  tarjeta.sellos = Math.min(MAX_SELLOS, Number(tarjeta.sellos || 0) + Number(cantidad || 1));
+  tarjeta.sellos = Math.min(
+    MAX_SELLOS,
+    Number(tarjeta.sellos || 0) + Number(cantidad || 1)
+  );
 
   if (tarjeta.sellos >= MAX_SELLOS && !tarjeta.premioDisponible) {
     tarjeta.premioTipo = obtenerPremioActual(tarjeta);
     tarjeta.premioDisponible = true;
     alert(`La tarjeta de ${tarjeta.cliente} completó ${MAX_SELLOS} viajes. ${obtenerTextoPremio(tarjeta)}.`);
   }
-}
-
-function canjearPremio(codigo) {
+}function canjearPremio(codigo) {
   const tarjeta = buscarTarjetaPorCodigo(codigo);
   if (!tarjeta) return;
 
@@ -460,7 +548,9 @@ function canjearPremio(codigo) {
   let precio = 0;
 
   if (premio === "mitad de precio") {
-    const precioNormal = Number(prompt("Ingrese el precio normal del viaje para aplicar la mitad de precio:"));
+    const precioNormal = Number(
+      prompt("Ingrese el precio normal del viaje para aplicar la mitad de precio:")
+    );
 
     if (!precioNormal || precioNormal <= 0) {
       alert("Ingrese un precio válido para aplicar el premio.");
@@ -548,7 +638,8 @@ function actualizarFormularioSegunTipo() {
     inputGasto.value = "";
     inputCodigo.value = generarCodigoTarjeta();
     totalVisual.textContent = "Total: $0.00";
-    cambioVisual.textContent = "Cambio: $0.00";    actualizarVistaTarjetaNueva();
+    cambioVisual.textContent = "Cambio: $0.00";
+    actualizarVistaTarjetaNueva();
   }
 
   if (tipo === "soloDinero") {
@@ -591,12 +682,15 @@ function actualizarFormularioSegunTipo() {
   }
 
   actualizarCambioVisual();
+  actualizarCamposPendiente();
 }
 
 function actualizarCambioVisual() {
   const tipo = tipoRegistro.value;
   const precio = parseFloat(inputPrecio.value) || 0;
-  const cantidad = tipo === "viaje" ? (parseInt(inputCantidadViajes.value, 10) || 1) : 1;
+  const cantidad = tipo === "viaje"
+    ? (parseInt(inputCantidadViajes.value, 10) || 1)
+    : 1;
   const pagaCon = parseFloat(inputPagaCon.value);
 
   if (tipo === "gasto" || tipo === "nuevoUsuario") {
@@ -637,6 +731,7 @@ inputPrecio.addEventListener("input", actualizarCambioVisual);
 inputCantidadViajes.addEventListener("input", actualizarCambioVisual);
 inputPagaCon.addEventListener("input", actualizarCambioVisual);
 tipoRegistro.addEventListener("change", actualizarFormularioSegunTipo);
+inputEstado.addEventListener("change", actualizarCamposPendiente);
 inputCliente.addEventListener("input", actualizarVistaTarjetaNueva);
 inputLugar.addEventListener("input", actualizarVistaTarjetaNueva);
 
@@ -658,7 +753,9 @@ function obtenerNombreHistorial() {
   const tipo = tipoMejorDia ? tipoMejorDia.value : "";
 
   if (modoVista === "todo") return "Historial_Completo";
-  if (modoVista === "fecha" && filtroFecha.value) return formatearFechaParaNombre(filtroFecha.value);
+  if (modoVista === "fecha" && filtroFecha.value) {
+    return formatearFechaParaNombre(filtroFecha.value);
+  }
 
   if (modoVista === "mejorDia" && filtroFecha.value) {
     let tipoTexto = "";
@@ -683,7 +780,9 @@ function obtenerTituloHistorial() {
   const tipo = tipoMejorDia ? tipoMejorDia.value : "";
 
   if (modoVista === "todo") return "HISTORIAL COMPLETO";
-  if (modoVista === "fecha" && filtroFecha.value) return `HISTORIAL - ${formatearFecha(filtroFecha.value)}`;
+  if (modoVista === "fecha" && filtroFecha.value) {
+    return `HISTORIAL - ${formatearFecha(filtroFecha.value)}`;
+  }
 
   if (modoVista === "mejorDia" && filtroFecha.value) {
     let tipoTexto = "";
@@ -702,9 +801,7 @@ function obtenerTituloHistorial() {
   }
 
   return `HISTORIAL - ${formatearFecha(obtenerFechaHoy())}`;
-}
-
-function actualizarResumen(totalViajes, pendiente, totalGastado, disponible) {
+}function actualizarResumen(totalViajes, pendiente, totalGastado, disponible) {
   document.getElementById("totalViajes").textContent = `Total de viajes: ${totalViajes}`;
   document.getElementById("totalGastado").textContent = `Total gastado: $${totalGastado.toFixed(2)}`;
   document.getElementById("disponible").textContent = `Disponible: $${disponible.toFixed(2)}`;
@@ -717,7 +814,7 @@ function calcularResumen(registros) {
   let totalGastado = 0;
   let totalViajes = 0;
 
-  registros.forEach((v) => {
+  registros.forEach(v => {
     if (v.tipo === "gasto") {
       totalGastado += Number(v.gasto || 0);
       return;
@@ -747,7 +844,9 @@ function calcularResumen(registros) {
   }
 
   return { total, pendiente, totalGastado, totalViajes, disponible };
-}function crearItem(v, numero) {
+}
+
+function crearItem(v, numero) {
   const li = document.createElement("li");
   const numeroFormateado = formatearNumero(numero);
 
@@ -769,7 +868,7 @@ function calcularResumen(registros) {
 
     li.innerHTML = `
       <strong>${numeroFormateado}- ${formatearFecha(v.fecha)}</strong> <br>
-      ${escaparHtml(nombreHistorial)} - $${Number(v.precio).toFixed(2)} <strong>(${v.estado})</strong>
+      ${escaparHtml(nombreHistorial)} - $${Number(v.precio || 0).toFixed(2)} <strong>(${v.estado})</strong>
       ${premioTexto}
     `;
     li.style.background = v.estado === "Pagado" ? "#d4edda" : "#f8d7da";
@@ -835,7 +934,10 @@ function aplicarFiltroTipo(registros) {
   const tipo = filtroTipo ? filtroTipo.value : "todo";
 
   if (tipo === "ingreso") {
-    return registros.filter(v => (v.tipo === "viaje" && v.estado === "Pagado") || v.tipo === "soloDinero");
+    return registros.filter(v =>
+      (v.tipo === "viaje" && v.estado === "Pagado") ||
+      v.tipo === "soloDinero"
+    );
   }
 
   if (tipo === "pendiente") {
@@ -853,18 +955,164 @@ function aplicarFiltroTipo(registros) {
   return registros;
 }
 
-function renderListaAgrupada(registros) {
+function agregarPendientesAgrupados(registros) {
+  const grupos = new Map();
+
+  registros.forEach(registro => {
+    const clave = normalizarClienteKey(registro.cliente);
+
+    if (!grupos.has(clave)) {
+      grupos.set(clave, {
+        cliente: registro.cliente,
+        viajes: []
+      });
+    }
+
+    grupos.get(clave).viajes.push(registro);
+  });
+
+  if (grupos.size === 0) return;
+
+  const titulo = document.createElement("li");
+  titulo.className = "grupo-titulo";
+  titulo.innerHTML = `
+    <span>PENDIENTE (${grupos.size})</span>
+    <span class="flecha-grupo">▲</span>
+  `;
+  lista.appendChild(titulo);
+
+  grupos.forEach(grupo => {
+    const li = document.createElement("li");
+    li.className = "tarjeta-fidelidad";
+    li.style.background = "#f8d7da";
+
+    const lugares = [
+      ...new Set(grupo.viajes.map(viaje => viaje.lugar || "Sin lugar"))
+    ].join(", ");
+
+    const total = obtenerTotalPendienteCliente(grupo.cliente, grupo.viajes);
+
+    li.innerHTML = `
+      <strong>Cliente: ${escaparHtml(grupo.cliente)}</strong><br>
+      Viajes pendientes: ${grupo.viajes.length}<br>
+      Lugares: ${escaparHtml(lugares)}<br>
+      Total pendiente:
+      <span class="total-pendiente" title="Haz clic para editar">$${total.toFixed(2)}</span>
+    `;
+
+    const totalPendiente = li.querySelector(".total-pendiente");
+    totalPendiente.onclick = () => {
+      editarTotalPendiente(grupo.cliente, totalPendiente);
+    };
+
+    const btnEliminar = document.createElement("button");
+    btnEliminar.type = "button";
+    btnEliminar.className = "btn-eliminar";
+    btnEliminar.textContent = "Eliminar";
+    btnEliminar.onclick = () => eliminarPendientesCliente(grupo.cliente);
+
+    const btnPagado = document.createElement("button");
+    btnPagado.type = "button";
+    btnPagado.className = "btn-secundario";
+    btnPagado.textContent = "Pagado";
+    btnPagado.onclick = () => marcarPendientesComoPagados(grupo.cliente);
+
+    li.appendChild(document.createElement("br"));
+    li.appendChild(btnEliminar);
+    li.appendChild(btnPagado);
+    lista.appendChild(li);
+  });
+}
+
+function editarTotalPendiente(cliente, elemento) {
+  const totalActual = obtenerTotalPendienteCliente(cliente);
+  const input = document.createElement("input");
+
+  input.type = "number";
+  input.min = "0";
+  input.step = "0.01";
+  input.value = totalActual.toFixed(2);
+  input.className = "total-pendiente-input";
+
+  elemento.replaceWith(input);
+  input.focus();
+  input.select();
+
+  let guardado = false;
+
+  const guardarEdicion = () => {
+    if (guardado) return;
+
+    guardado = true;
+    guardarTotalPendienteCliente(cliente, input.value);
+    refrescarVistaActual();
+  };
+
+  input.addEventListener("keydown", evento => {
+    if (evento.key === "Enter") {
+      input.blur();
+    }
+
+    if (evento.key === "Escape") {
+      guardado = true;
+      refrescarVistaActual();
+    }
+  });
+
+  input.addEventListener("blur", guardarEdicion);
+}
+
+function marcarPendientesComoPagados(cliente) {
+  const viajesPendientes = obtenerViajesPendientesCliente(cliente);
+  if (viajesPendientes.length === 0) return;
+
+  const confirmar = confirm(
+    `¿Marcar como pagados todos los viajes pendientes de ${cliente}?`
+  );
+
+  if (!confirmar) return;
+
+  viajesPendientes.forEach(viaje => {
+    viaje.estado = "Pagado";
+  });
+
+  eliminarCuentaPendiente(cliente);
+  guardar();
+  refrescarVistaActual();
+}
+
+function eliminarPendientesCliente(cliente) {
+  const viajesPendientes = obtenerViajesPendientesCliente(cliente);
+  if (viajesPendientes.length === 0) return;
+
+  const confirmar = confirm(
+    `¿Eliminar todos los viajes pendientes de ${cliente}?`
+  );
+
+  if (!confirmar) return;
+
+  const ids = new Set(viajesPendientes.map(viaje => viaje.id));
+
+  viajes = viajes.filter(viaje => !ids.has(viaje.id));
+  eliminarCuentaPendiente(cliente);
+  guardar();
+  refrescarVistaActual();
+}function renderListaAgrupada(registros) {
   lista.innerHTML = "";
 
   const registrosFiltrados = aplicarFiltroTipo(registros);
 
-  const viajesPagados = registrosFiltrados.filter(v => v.tipo === "viaje" && v.estado === "Pagado");
-  const viajesPendientes = registrosFiltrados.filter(v => v.tipo === "viaje" && v.estado === "Pendiente");
+  const viajesPagados = registrosFiltrados.filter(
+    v => v.tipo === "viaje" && v.estado === "Pagado"
+  );
+  const viajesPendientes = registrosFiltrados.filter(
+    v => v.tipo === "viaje" && v.estado === "Pendiente"
+  );
   const soloDinero = registrosFiltrados.filter(v => v.tipo === "soloDinero");
   const gastos = registrosFiltrados.filter(v => v.tipo === "gasto");
 
   agregarGrupoHistorial("PAGADO", viajesPagados, "pagado");
-  agregarGrupoHistorial("PENDIENTE", viajesPendientes, "pendiente");
+  agregarPendientesAgrupados(viajesPendientes);
   agregarGrupoHistorial("SOLO DINERO", soloDinero, "solo-dinero");
   agregarGrupoHistorial("GASTO", gastos, "gasto");
 
@@ -945,7 +1193,8 @@ formulario.addEventListener("submit", function (e) {
     actualizarFormularioSegunTipo();
     renderTarjetas();
     mostrarHoy();
-    alert("Tarjeta de fidelidad creada correctamente");    return;
+    alert("Tarjeta de fidelidad creada correctamente");
+    return;
   }
 
   if (tipo === "gasto") {
@@ -1023,6 +1272,11 @@ formulario.addEventListener("submit", function (e) {
     }
 
     marcarViajesEnTarjeta(codigo, cantidadViajes);
+
+    if (estado === "Pendiente") {
+      sumarMontoPendiente(cliente, precio * cantidadViajes);
+    }
+
     guardar();
     renderTarjetas();
 
@@ -1064,6 +1318,7 @@ function buscarMejorDia() {
 
     if (v.tipo === "viaje") {
       resumenPorFecha[v.fecha].viajes++;
+
       if (v.estado === "Pagado") {
         resumenPorFecha[v.fecha].dinero += Number(v.precio || 0);
       }
@@ -1088,10 +1343,16 @@ function buscarMejorDia() {
     const mejor = resumenPorFecha[mejorFecha];
 
     if (tipo === "dinero") {
-      if (actual.dinero > mejor.dinero || (actual.dinero === mejor.dinero && fecha > mejorFecha)) {
+      if (
+        actual.dinero > mejor.dinero ||
+        (actual.dinero === mejor.dinero && fecha > mejorFecha)
+      ) {
         mejorFecha = fecha;
       }
-    } else if (actual.viajes > mejor.viajes || (actual.viajes === mejor.viajes && fecha > mejorFecha)) {
+    } else if (
+      actual.viajes > mejor.viajes ||
+      (actual.viajes === mejor.viajes && fecha > mejorFecha)
+    ) {
       mejorFecha = fecha;
     }
   });
@@ -1104,12 +1365,18 @@ function buscarMejorDia() {
 function mostrarHoy() {
   modoVista = "hoy";
   const hoy = obtenerFechaHoy();
+
   viajesMostrados = viajes.filter(v => v.fecha === hoy);
   renderListaAgrupada(viajesMostrados);
 
   const resumen = calcularResumen(aplicarFiltroTipo(viajesMostrados));
   totalSpan.textContent = resumen.total.toFixed(2);
-  actualizarResumen(resumen.totalViajes, resumen.pendiente, resumen.totalGastado, resumen.disponible);
+  actualizarResumen(
+    resumen.totalViajes,
+    resumen.pendiente,
+    resumen.totalGastado,
+    resumen.disponible
+  );
 
   if (aplicarFiltroTipo(viajesMostrados).length === 0) {
     lista.innerHTML = '<div class="mensaje-vacio">No hay registros hoy</div>';
@@ -1123,14 +1390,17 @@ function mostrarViajes() {
 
   const resumen = calcularResumen(aplicarFiltroTipo(viajesMostrados));
   totalSpan.textContent = resumen.total.toFixed(2);
-  actualizarResumen(resumen.totalViajes, resumen.pendiente, resumen.totalGastado, resumen.disponible);
+  actualizarResumen(
+    resumen.totalViajes,
+    resumen.pendiente,
+    resumen.totalGastado,
+    resumen.disponible
+  );
 
   if (aplicarFiltroTipo(viajesMostrados).length === 0) {
     lista.innerHTML = '<div class="mensaje-vacio">No hay registros guardados</div>';
   }
-}
-
-function filtrarPorFecha() {
+}function filtrarPorFecha() {
   const fechaSeleccionada = filtroFecha.value;
 
   if (!fechaSeleccionada) {
@@ -1138,13 +1408,21 @@ function filtrarPorFecha() {
     return;
   }
 
-  if (modoVista !== "mejorDia") modoVista = "fecha";
+  if (modoVista !== "mejorDia") {
+    modoVista = "fecha";
+  }
 
   viajesMostrados = viajes.filter(v => v.fecha === fechaSeleccionada);
   renderListaAgrupada(viajesMostrados);
 
   const resumen = calcularResumen(aplicarFiltroTipo(viajesMostrados));
-  totalSpan.textContent = resumen.total.toFixed(2);  actualizarResumen(resumen.totalViajes, resumen.pendiente, resumen.totalGastado, resumen.disponible);
+  totalSpan.textContent = resumen.total.toFixed(2);
+  actualizarResumen(
+    resumen.totalViajes,
+    resumen.pendiente,
+    resumen.totalGastado,
+    resumen.disponible
+  );
 
   if (aplicarFiltroTipo(viajesMostrados).length === 0) {
     lista.innerHTML = '<div class="mensaje-vacio">No hay registros en esa fecha</div>';
@@ -1160,12 +1438,20 @@ function filtrarPorMes() {
   }
 
   modoVista = "mes";
-  viajesMostrados = viajes.filter(v => v.fecha && v.fecha.startsWith(mesSeleccionado));
+  viajesMostrados = viajes.filter(
+    v => v.fecha && v.fecha.startsWith(mesSeleccionado)
+  );
+
   renderListaAgrupada(viajesMostrados);
 
   const resumen = calcularResumen(aplicarFiltroTipo(viajesMostrados));
   totalSpan.textContent = resumen.total.toFixed(2);
-  actualizarResumen(resumen.totalViajes, resumen.pendiente, resumen.totalGastado, resumen.disponible);
+  actualizarResumen(
+    resumen.totalViajes,
+    resumen.pendiente,
+    resumen.totalGastado,
+    resumen.disponible
+  );
 
   if (aplicarFiltroTipo(viajesMostrados).length === 0) {
     lista.innerHTML = '<div class="mensaje-vacio">No hay registros en ese mes</div>';
@@ -1187,12 +1473,20 @@ function filtrarPorRango() {
   }
 
   modoVista = "rango";
-  viajesMostrados = viajes.filter(v => v.fecha >= fechaInicio && v.fecha <= fechaFin);
+  viajesMostrados = viajes.filter(
+    v => v.fecha >= fechaInicio && v.fecha <= fechaFin
+  );
+
   renderListaAgrupada(viajesMostrados);
 
   const resumen = calcularResumen(aplicarFiltroTipo(viajesMostrados));
   totalSpan.textContent = resumen.total.toFixed(2);
-  actualizarResumen(resumen.totalViajes, resumen.pendiente, resumen.totalGastado, resumen.disponible);
+  actualizarResumen(
+    resumen.totalViajes,
+    resumen.pendiente,
+    resumen.totalGastado,
+    resumen.disponible
+  );
 
   if (aplicarFiltroTipo(viajesMostrados).length === 0) {
     lista.innerHTML = '<div class="mensaje-vacio">No hay registros en ese rango de fechas</div>';
@@ -1262,10 +1556,21 @@ function guardarHistorial() {
 
     registros.forEach((v, index) => {
       const numeroFormateado = formatearNumero(index + 1);
-      const monto = v.tipo === "gasto" ? Number(v.gasto || 0) : Number(v.precio || 0);
-      const etiqueta = v.tipo === "gasto" ? "Gasto" : (v.tipo === "soloDinero" ? "Solo dinero" : v.estado);
-      const lugarTexto = v.lugar ? `<br>Lugar: ${escaparHtml(v.lugar)}` : "";
-      const codigoTexto = v.codigo ? `<br>Código: ${escaparHtml(v.codigo)}` : "";
+      const monto = v.tipo === "gasto"
+        ? Number(v.gasto || 0)
+        : Number(v.precio || 0);
+
+      const etiqueta = v.tipo === "gasto"
+        ? "Gasto"
+        : (v.tipo === "soloDinero" ? "Solo dinero" : v.estado);
+
+      const lugarTexto = v.lugar
+        ? `<br>Lugar: ${escaparHtml(v.lugar)}`
+        : "";
+
+      const codigoTexto = v.codigo
+        ? `<br>Código: ${escaparHtml(v.codigo)}`
+        : "";
 
       contenido += `
         <p>
