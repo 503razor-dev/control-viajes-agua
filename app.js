@@ -26,7 +26,11 @@ function formatearFechaParaNombre(fecha) {
   if (!fecha) return "Sin_fecha";
 
   const partes = fecha.split("-");
-  return `${partes[2]}_${obtenerNombreMes(partes[1])}_${partes[0]}`;
+  const year = partes[0];
+  const month = partes[1];
+  const day = partes[2];
+
+  return `${day}_${obtenerNombreMes(month)}_${year}`;
 }
 
 function formatearNumero(numero) {
@@ -40,7 +44,7 @@ function capitalizarTexto(texto) {
     .trim()
     .split(/\s+/)
     .filter(p => p !== "")
-    .map(palabra => palabra.charAt(0).toUpperCase() + palabra.slice(1).toLowerCase())
+    .map((palabra) => palabra.charAt(0).toUpperCase() + palabra.slice(1).toLowerCase())
     .join(" ");
 }
 
@@ -147,8 +151,8 @@ function validarAcceso() {
 }
 
 if (inputClaveAcceso) {
-  inputClaveAcceso.addEventListener("keydown", evento => {
-    if (evento.key === "Enter") {
+  inputClaveAcceso.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
       validarAcceso();
     }
   });
@@ -262,10 +266,10 @@ function guardarTotalPendienteCliente(cliente, total) {
 function eliminarCuentaPendiente(cliente) {
   const clave = normalizarClienteKey(cliente);
   cuentasPendientes = cuentasPendientes.filter(cuenta => cuenta.clienteKey !== clave);
-}function actualizarCamposPendiente() {
-  const esViajePendiente =
-    tipoRegistro.value === "viaje" &&
-    inputEstado.value === "Pendiente";
+}
+
+function actualizarCamposPendiente() {
+  const esViajePendiente = tipoRegistro.value === "viaje" && inputEstado.value === "Pendiente";
 
   if (esViajePendiente) {
     bloqueLugarCodigo.style.display = "block";
@@ -299,36 +303,7 @@ function obtenerUrlTarjeta(tarjeta) {
 function obtenerUrlQr(tarjeta) {
   const data = encodeURIComponent(obtenerUrlTarjeta(tarjeta));
   return `https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${data}`;
-}
-
-async function compartirQr(codigo) {
-  const tarjeta = buscarTarjetaPorCodigo(codigo);
-  if (!tarjeta) return;
-
-  const urlQr = obtenerUrlQr(tarjeta);
-
-  try {
-    const respuesta = await fetch(urlQr);
-    const blob = await respuesta.blob();
-    const archivo = new File([blob], `QR_${tarjeta.codigo}.png`, {
-      type: "image/png"
-    });
-
-    if (navigator.canShare && navigator.canShare({ files: [archivo] })) {
-      await navigator.share({
-        title: `QR ${tarjeta.codigo}`,
-        files: [archivo]
-      });
-      return;
-    }
-  } catch (error) {
-    console.warn("No se pudo compartir el QR como imagen", error);
-  }
-
-  window.open(urlQr, "_blank");
-}
-
-function abrirPdfQr(codigo) {
+}function abrirPdfQr(codigo) {
   const tarjeta = buscarTarjetaPorCodigo(codigo);
   if (!tarjeta) return;
 
@@ -450,7 +425,7 @@ function eliminarTarjeta(codigo) {
   const confirmar = confirm(`¿Eliminar la tarjeta de ${tarjeta.cliente}?`);
   if (!confirmar) return;
 
-  tarjetas = tarjetas.filter(tarjetaActual => tarjetaActual.codigo !== codigo);
+  tarjetas = tarjetas.filter(t => t.codigo !== codigo);
   guardar();
   renderTarjetas();
 }
@@ -463,7 +438,7 @@ function renderTarjetas() {
     return;
   }
 
-  tarjetas.forEach(tarjeta => {
+  tarjetas.forEach((tarjeta) => {
     const li = document.createElement("li");
     li.className = "tarjeta-fidelidad";
 
@@ -525,17 +500,16 @@ function marcarViajesEnTarjeta(codigo, cantidad) {
   const tarjeta = buscarTarjetaPorCodigo(codigo);
   if (!tarjeta) return;
 
-  tarjeta.sellos = Math.min(
-    MAX_SELLOS,
-    Number(tarjeta.sellos || 0) + Number(cantidad || 1)
-  );
+  tarjeta.sellos = Math.min(MAX_SELLOS, Number(tarjeta.sellos || 0) + Number(cantidad || 1));
 
   if (tarjeta.sellos >= MAX_SELLOS && !tarjeta.premioDisponible) {
     tarjeta.premioTipo = obtenerPremioActual(tarjeta);
     tarjeta.premioDisponible = true;
     alert(`La tarjeta de ${tarjeta.cliente} completó ${MAX_SELLOS} viajes. ${obtenerTextoPremio(tarjeta)}.`);
   }
-}function canjearPremio(codigo) {
+}
+
+function canjearPremio(codigo) {
   const tarjeta = buscarTarjetaPorCodigo(codigo);
   if (!tarjeta) return;
 
@@ -548,9 +522,7 @@ function marcarViajesEnTarjeta(codigo, cantidad) {
   let precio = 0;
 
   if (premio === "mitad de precio") {
-    const precioNormal = Number(
-      prompt("Ingrese el precio normal del viaje para aplicar la mitad de precio:")
-    );
+    const precioNormal = Number(prompt("Ingrese el precio normal del viaje para aplicar la mitad de precio:"));
 
     if (!precioNormal || precioNormal <= 0) {
       alert("Ingrese un precio válido para aplicar el premio.");
@@ -683,14 +655,10 @@ function actualizarFormularioSegunTipo() {
 
   actualizarCambioVisual();
   actualizarCamposPendiente();
-}
-
-function actualizarCambioVisual() {
+}function actualizarCambioVisual() {
   const tipo = tipoRegistro.value;
   const precio = parseFloat(inputPrecio.value) || 0;
-  const cantidad = tipo === "viaje"
-    ? (parseInt(inputCantidadViajes.value, 10) || 1)
-    : 1;
+  const cantidad = tipo === "viaje" ? (parseInt(inputCantidadViajes.value, 10) || 1) : 1;
   const pagaCon = parseFloat(inputPagaCon.value);
 
   if (tipo === "gasto" || tipo === "nuevoUsuario") {
@@ -753,9 +721,7 @@ function obtenerNombreHistorial() {
   const tipo = tipoMejorDia ? tipoMejorDia.value : "";
 
   if (modoVista === "todo") return "Historial_Completo";
-  if (modoVista === "fecha" && filtroFecha.value) {
-    return formatearFechaParaNombre(filtroFecha.value);
-  }
+  if (modoVista === "fecha" && filtroFecha.value) return formatearFechaParaNombre(filtroFecha.value);
 
   if (modoVista === "mejorDia" && filtroFecha.value) {
     let tipoTexto = "";
@@ -780,9 +746,7 @@ function obtenerTituloHistorial() {
   const tipo = tipoMejorDia ? tipoMejorDia.value : "";
 
   if (modoVista === "todo") return "HISTORIAL COMPLETO";
-  if (modoVista === "fecha" && filtroFecha.value) {
-    return `HISTORIAL - ${formatearFecha(filtroFecha.value)}`;
-  }
+  if (modoVista === "fecha" && filtroFecha.value) return `HISTORIAL - ${formatearFecha(filtroFecha.value)}`;
 
   if (modoVista === "mejorDia" && filtroFecha.value) {
     let tipoTexto = "";
@@ -801,7 +765,9 @@ function obtenerTituloHistorial() {
   }
 
   return `HISTORIAL - ${formatearFecha(obtenerFechaHoy())}`;
-}function actualizarResumen(totalViajes, pendiente, totalGastado, disponible) {
+}
+
+function actualizarResumen(totalViajes, pendiente, totalGastado, disponible) {
   document.getElementById("totalViajes").textContent = `Total de viajes: ${totalViajes}`;
   document.getElementById("totalGastado").textContent = `Total gastado: $${totalGastado.toFixed(2)}`;
   document.getElementById("disponible").textContent = `Disponible: $${disponible.toFixed(2)}`;
@@ -814,7 +780,7 @@ function calcularResumen(registros) {
   let totalGastado = 0;
   let totalViajes = 0;
 
-  registros.forEach(v => {
+  registros.forEach((v) => {
     if (v.tipo === "gasto") {
       totalGastado += Number(v.gasto || 0);
       return;
@@ -868,7 +834,7 @@ function crearItem(v, numero) {
 
     li.innerHTML = `
       <strong>${numeroFormateado}- ${formatearFecha(v.fecha)}</strong> <br>
-      ${escaparHtml(nombreHistorial)} - $${Number(v.precio || 0).toFixed(2)} <strong>(${v.estado})</strong>
+      ${escaparHtml(nombreHistorial)} - $${Number(v.precio).toFixed(2)} <strong>(${v.estado})</strong>
       ${premioTexto}
     `;
     li.style.background = v.estado === "Pagado" ? "#d4edda" : "#f8d7da";
@@ -934,10 +900,7 @@ function aplicarFiltroTipo(registros) {
   const tipo = filtroTipo ? filtroTipo.value : "todo";
 
   if (tipo === "ingreso") {
-    return registros.filter(v =>
-      (v.tipo === "viaje" && v.estado === "Pagado") ||
-      v.tipo === "soloDinero"
-    );
+    return registros.filter(v => (v.tipo === "viaje" && v.estado === "Pagado") || v.tipo === "soloDinero");
   }
 
   if (tipo === "pendiente") {
@@ -953,75 +916,112 @@ function aplicarFiltroTipo(registros) {
   }
 
   return registros;
-}
-
-function agregarPendientesAgrupados(registros) {
+}function agregarPendientesAgrupados(registros) {
   const grupos = new Map();
 
-  registros.forEach(registro => {
-    const clave = normalizarClienteKey(registro.cliente);
+  registros.forEach((registro) => {
+    const llave = normalizarClienteKey(registro.cliente);
 
-    if (!grupos.has(clave)) {
-      grupos.set(clave, {
-        cliente: registro.cliente,
+    if (!grupos.has(llave)) {
+      grupos.set(llave, {
+        cliente: registro.cliente || "Sin cliente",
         viajes: []
       });
     }
 
-    grupos.get(clave).viajes.push(registro);
+    grupos.get(llave).viajes.push(registro);
   });
 
   if (grupos.size === 0) return;
 
-  const titulo = document.createElement("li");
-  titulo.className = "grupo-titulo";
-  titulo.innerHTML = `
-    <span>PENDIENTE (${grupos.size})</span>
-    <span class="flecha-grupo">▲</span>
-  `;
-  lista.appendChild(titulo);
+  lista.appendChild(crearTituloGrupo("PENDIENTE", grupos.size, "pendiente"));
 
-  grupos.forEach(grupo => {
-    const li = document.createElement("li");
-    li.className = "tarjeta-fidelidad";
-    li.style.background = "#f8d7da";
-
-    const lugares = [
-      ...new Set(grupo.viajes.map(viaje => viaje.lugar || "Sin lugar"))
-    ].join(", ");
-
+  grupos.forEach((grupo) => {
     const total = obtenerTotalPendienteCliente(grupo.cliente, grupo.viajes);
+    const lugares = [...new Set(grupo.viajes.map((viaje) => viaje.lugar || "Sin lugar"))].join(", ");
+    const ultimoViaje = grupo.viajes[grupo.viajes.length - 1];
+
+    const detalleViajes = grupo.viajes.map((viaje, indice) => `
+      <div style="margin-top: 8px; background: #fff; padding: 10px; border-radius: 6px;">
+        <strong>${formatearNumero(indice + 1)}- ${formatearFecha(viaje.fecha)}</strong><br>
+        ${escaparHtml(viaje.lugar || viaje.cliente)} - $${Number(viaje.precio || 0).toFixed(2)} <strong>(Pendiente)</strong>
+      </div>
+    `).join("");
+
+    const li = document.createElement("li");
+    li.className = "tarjeta-fidelidad item-historial-oculto";
+    li.dataset.grupoHistorial = "pendiente";
+    li.style.background = "#f8d7da";
 
     li.innerHTML = `
       <strong>Cliente: ${escaparHtml(grupo.cliente)}</strong><br>
       Viajes pendientes: ${grupo.viajes.length}<br>
       Lugares: ${escaparHtml(lugares)}<br>
-      Total pendiente:
-      <span class="total-pendiente" title="Haz clic para editar">$${total.toFixed(2)}</span>
+      Total pendiente: <strong class="total-pendiente-editable" title="Haz clic para editar el total" style="cursor: pointer; text-decoration: underline;">$${total.toFixed(2)}</strong>
+      <div class="detalle-viajes-pendientes">${detalleViajes}</div>
     `;
 
-    const totalPendiente = li.querySelector(".total-pendiente");
-    totalPendiente.onclick = () => {
-      editarTotalPendiente(grupo.cliente, totalPendiente);
-    };
+    const totalEditable = li.querySelector(".total-pendiente-editable");
+
+    totalEditable.addEventListener("click", (event) => {
+      event.stopPropagation();
+      editarTotalPendiente(grupo.cliente, totalEditable);
+    });
 
     const btnEliminar = document.createElement("button");
-    btnEliminar.type = "button";
-    btnEliminar.className = "btn-eliminar";
     btnEliminar.textContent = "Eliminar";
-    btnEliminar.onclick = () => eliminarPendientesCliente(grupo.cliente);
+    btnEliminar.style.marginTop = "10px";
+
+    btnEliminar.onclick = (event) => {
+      event.stopPropagation();
+      eliminarPendientesCliente(grupo.cliente);
+    };
 
     const btnPagado = document.createElement("button");
-    btnPagado.type = "button";
-    btnPagado.className = "btn-secundario";
     btnPagado.textContent = "Pagado";
-    btnPagado.onclick = () => marcarPendientesComoPagados(grupo.cliente);
+    btnPagado.style.marginTop = "10px";
+    btnPagado.style.marginLeft = "6px";
+    btnPagado.style.background = "#6c757d";
 
-    li.appendChild(document.createElement("br"));
+    btnPagado.onclick = (event) => {
+      event.stopPropagation();
+      marcarPendientesComoPagados(grupo.cliente);
+    };
+
+    const btnNuevoViaje = document.createElement("button");
+    btnNuevoViaje.textContent = "Nuevo viaje";
+    btnNuevoViaje.style.marginTop = "10px";
+    btnNuevoViaje.style.marginLeft = "6px";
+    btnNuevoViaje.style.background = "#0d6efd";
+
+    btnNuevoViaje.onclick = (event) => {
+      event.stopPropagation();
+      nuevoViajePendiente(grupo.cliente, ultimoViaje.lugar || "");
+    };
+
     li.appendChild(btnEliminar);
     li.appendChild(btnPagado);
+    li.appendChild(btnNuevoViaje);
     lista.appendChild(li);
   });
+}
+
+function nuevoViajePendiente(cliente, lugar) {
+  tipoRegistro.value = "viaje";
+  inputEstado.value = "Pendiente";
+  actualizarFormularioSegunTipo();
+
+  inputCliente.value = cliente;
+  inputLugar.value = lugar;
+  inputCodigo.value = "";
+  inputPrecio.value = "";
+  inputCantidadViajes.value = 1;
+  inputPagaCon.value = "";
+  inputFecha.value = obtenerFechaHoy();
+  actualizarCambioVisual();
+
+  window.scrollTo({ top: 0, behavior: "smooth" });
+  setTimeout(() => inputPrecio.focus(), 400);
 }
 
 function editarTotalPendiente(cliente, elemento) {
@@ -1042,16 +1042,14 @@ function editarTotalPendiente(cliente, elemento) {
 
   const guardarEdicion = () => {
     if (guardado) return;
-
     guardado = true;
+
     guardarTotalPendienteCliente(cliente, input.value);
     refrescarVistaActual();
   };
 
   input.addEventListener("keydown", evento => {
-    if (evento.key === "Enter") {
-      input.blur();
-    }
+    if (evento.key === "Enter") input.blur();
 
     if (evento.key === "Escape") {
       guardado = true;
@@ -1066,11 +1064,36 @@ function marcarPendientesComoPagados(cliente) {
   const viajesPendientes = obtenerViajesPendientesCliente(cliente);
   if (viajesPendientes.length === 0) return;
 
-  const confirmar = confirm(
-    `¿Marcar como pagados todos los viajes pendientes de ${cliente}?`
-  );
-
+  const confirmar = confirm(`¿Marcar como pagados todos los viajes pendientes de ${cliente}?`);
   if (!confirmar) return;
+
+  const totalFinal = obtenerTotalPendienteCliente(cliente);
+  const totalOriginal = viajesPendientes.reduce((total, viaje) => {
+    return total + Number(viaje.precio || 0);
+  }, 0);
+
+  let diferencia = Number((totalFinal - totalOriginal).toFixed(2));
+
+  if (diferencia < 0) {
+    for (let i = viajesPendientes.length - 1; i >= 0; i--) {
+      const viaje = viajesPendientes[i];
+      const precioActual = Number(viaje.precio || 0);
+      const descuento = Math.min(precioActual, Math.abs(diferencia));
+
+      viaje.precio = Number((precioActual - descuento).toFixed(2));
+      diferencia = Number((diferencia + descuento).toFixed(2));
+
+      if (diferencia === 0) break;
+    }
+  }
+
+  if (diferencia > 0) {
+    const ultimoViaje = viajesPendientes[viajesPendientes.length - 1];
+
+    ultimoViaje.precio = Number(
+      (Number(ultimoViaje.precio || 0) + diferencia).toFixed(2)
+    );
+  }
 
   viajesPendientes.forEach(viaje => {
     viaje.estado = "Pagado";
@@ -1085,10 +1108,7 @@ function eliminarPendientesCliente(cliente) {
   const viajesPendientes = obtenerViajesPendientesCliente(cliente);
   if (viajesPendientes.length === 0) return;
 
-  const confirmar = confirm(
-    `¿Eliminar todos los viajes pendientes de ${cliente}?`
-  );
-
+  const confirmar = confirm(`¿Eliminar todos los viajes pendientes de ${cliente}?`);
   if (!confirmar) return;
 
   const ids = new Set(viajesPendientes.map(viaje => viaje.id));
@@ -1102,12 +1122,8 @@ function eliminarPendientesCliente(cliente) {
 
   const registrosFiltrados = aplicarFiltroTipo(registros);
 
-  const viajesPagados = registrosFiltrados.filter(
-    v => v.tipo === "viaje" && v.estado === "Pagado"
-  );
-  const viajesPendientes = registrosFiltrados.filter(
-    v => v.tipo === "viaje" && v.estado === "Pendiente"
-  );
+  const viajesPagados = registrosFiltrados.filter(v => v.tipo === "viaje" && v.estado === "Pagado");
+  const viajesPendientes = registrosFiltrados.filter(v => v.tipo === "viaje" && v.estado === "Pendiente");
   const soloDinero = registrosFiltrados.filter(v => v.tipo === "soloDinero");
   const gastos = registrosFiltrados.filter(v => v.tipo === "gasto");
 
@@ -1343,16 +1359,10 @@ function buscarMejorDia() {
     const mejor = resumenPorFecha[mejorFecha];
 
     if (tipo === "dinero") {
-      if (
-        actual.dinero > mejor.dinero ||
-        (actual.dinero === mejor.dinero && fecha > mejorFecha)
-      ) {
+      if (actual.dinero > mejor.dinero || (actual.dinero === mejor.dinero && fecha > mejorFecha)) {
         mejorFecha = fecha;
       }
-    } else if (
-      actual.viajes > mejor.viajes ||
-      (actual.viajes === mejor.viajes && fecha > mejorFecha)
-    ) {
+    } else if (actual.viajes > mejor.viajes || (actual.viajes === mejor.viajes && fecha > mejorFecha)) {
       mejorFecha = fecha;
     }
   });
@@ -1360,23 +1370,16 @@ function buscarMejorDia() {
   filtroFecha.value = mejorFecha;
   modoVista = "mejorDia";
   filtrarPorFecha();
-}
-
-function mostrarHoy() {
+}function mostrarHoy() {
   modoVista = "hoy";
   const hoy = obtenerFechaHoy();
-
   viajesMostrados = viajes.filter(v => v.fecha === hoy);
   renderListaAgrupada(viajesMostrados);
 
   const resumen = calcularResumen(aplicarFiltroTipo(viajesMostrados));
   totalSpan.textContent = resumen.total.toFixed(2);
-  actualizarResumen(
-    resumen.totalViajes,
-    resumen.pendiente,
-    resumen.totalGastado,
-    resumen.disponible
-  );
+
+  actualizarResumen(resumen.totalViajes, resumen.pendiente, resumen.totalGastado, 0);
 
   if (aplicarFiltroTipo(viajesMostrados).length === 0) {
     lista.innerHTML = '<div class="mensaje-vacio">No hay registros hoy</div>';
@@ -1390,17 +1393,14 @@ function mostrarViajes() {
 
   const resumen = calcularResumen(aplicarFiltroTipo(viajesMostrados));
   totalSpan.textContent = resumen.total.toFixed(2);
-  actualizarResumen(
-    resumen.totalViajes,
-    resumen.pendiente,
-    resumen.totalGastado,
-    resumen.disponible
-  );
+  actualizarResumen(resumen.totalViajes, resumen.pendiente, resumen.totalGastado, resumen.disponible);
 
   if (aplicarFiltroTipo(viajesMostrados).length === 0) {
     lista.innerHTML = '<div class="mensaje-vacio">No hay registros guardados</div>';
   }
-}function filtrarPorFecha() {
+}
+
+function filtrarPorFecha() {
   const fechaSeleccionada = filtroFecha.value;
 
   if (!fechaSeleccionada) {
@@ -1408,21 +1408,14 @@ function mostrarViajes() {
     return;
   }
 
-  if (modoVista !== "mejorDia") {
-    modoVista = "fecha";
-  }
+  if (modoVista !== "mejorDia") modoVista = "fecha";
 
   viajesMostrados = viajes.filter(v => v.fecha === fechaSeleccionada);
   renderListaAgrupada(viajesMostrados);
 
   const resumen = calcularResumen(aplicarFiltroTipo(viajesMostrados));
   totalSpan.textContent = resumen.total.toFixed(2);
-  actualizarResumen(
-    resumen.totalViajes,
-    resumen.pendiente,
-    resumen.totalGastado,
-    resumen.disponible
-  );
+  actualizarResumen(resumen.totalViajes, resumen.pendiente, resumen.totalGastado, resumen.disponible);
 
   if (aplicarFiltroTipo(viajesMostrados).length === 0) {
     lista.innerHTML = '<div class="mensaje-vacio">No hay registros en esa fecha</div>';
@@ -1438,20 +1431,12 @@ function filtrarPorMes() {
   }
 
   modoVista = "mes";
-  viajesMostrados = viajes.filter(
-    v => v.fecha && v.fecha.startsWith(mesSeleccionado)
-  );
-
+  viajesMostrados = viajes.filter(v => v.fecha && v.fecha.startsWith(mesSeleccionado));
   renderListaAgrupada(viajesMostrados);
 
   const resumen = calcularResumen(aplicarFiltroTipo(viajesMostrados));
   totalSpan.textContent = resumen.total.toFixed(2);
-  actualizarResumen(
-    resumen.totalViajes,
-    resumen.pendiente,
-    resumen.totalGastado,
-    resumen.disponible
-  );
+  actualizarResumen(resumen.totalViajes, resumen.pendiente, resumen.totalGastado, resumen.disponible);
 
   if (aplicarFiltroTipo(viajesMostrados).length === 0) {
     lista.innerHTML = '<div class="mensaje-vacio">No hay registros en ese mes</div>';
@@ -1473,20 +1458,12 @@ function filtrarPorRango() {
   }
 
   modoVista = "rango";
-  viajesMostrados = viajes.filter(
-    v => v.fecha >= fechaInicio && v.fecha <= fechaFin
-  );
-
+  viajesMostrados = viajes.filter(v => v.fecha >= fechaInicio && v.fecha <= fechaFin);
   renderListaAgrupada(viajesMostrados);
 
   const resumen = calcularResumen(aplicarFiltroTipo(viajesMostrados));
   totalSpan.textContent = resumen.total.toFixed(2);
-  actualizarResumen(
-    resumen.totalViajes,
-    resumen.pendiente,
-    resumen.totalGastado,
-    resumen.disponible
-  );
+  actualizarResumen(resumen.totalViajes, resumen.pendiente, resumen.totalGastado, resumen.disponible);
 
   if (aplicarFiltroTipo(viajesMostrados).length === 0) {
     lista.innerHTML = '<div class="mensaje-vacio">No hay registros en ese rango de fechas</div>';
@@ -1517,9 +1494,7 @@ function limpiarFiltro() {
 }
 
 filtroTipo.addEventListener("change", refrescarVistaActual);
-buscarPor.addEventListener("change", actualizarVisibilidadBusqueda);
-
-function guardarHistorial() {
+buscarPor.addEventListener("change", actualizarVisibilidadBusqueda);function guardarHistorial() {
   if (!viajesMostrados || viajesMostrados.length === 0) {
     alert("No hay datos para guardar");
     return;
@@ -1556,21 +1531,10 @@ function guardarHistorial() {
 
     registros.forEach((v, index) => {
       const numeroFormateado = formatearNumero(index + 1);
-      const monto = v.tipo === "gasto"
-        ? Number(v.gasto || 0)
-        : Number(v.precio || 0);
-
-      const etiqueta = v.tipo === "gasto"
-        ? "Gasto"
-        : (v.tipo === "soloDinero" ? "Solo dinero" : v.estado);
-
-      const lugarTexto = v.lugar
-        ? `<br>Lugar: ${escaparHtml(v.lugar)}`
-        : "";
-
-      const codigoTexto = v.codigo
-        ? `<br>Código: ${escaparHtml(v.codigo)}`
-        : "";
+      const monto = v.tipo === "gasto" ? Number(v.gasto || 0) : Number(v.precio || 0);
+      const etiqueta = v.tipo === "gasto" ? "Gasto" : (v.tipo === "soloDinero" ? "Solo dinero" : v.estado);
+      const lugarTexto = v.lugar ? `<br>Lugar: ${escaparHtml(v.lugar)}` : "";
+      const codigoTexto = v.codigo ? `<br>Código: ${escaparHtml(v.codigo)}` : "";
 
       contenido += `
         <p>
