@@ -1372,16 +1372,35 @@ function buscarMejorDia() {
   filtrarPorFecha();
 }function mostrarHoy() {
   modoVista = "hoy";
+
   const hoy = obtenerFechaHoy();
-  viajesMostrados = viajes.filter(v => v.fecha === hoy);
+
+  const registrosDeHoy = viajes.filter(v => v.fecha === hoy);
+
+  const pendientesDeDiasAnteriores = viajes.filter(v =>
+    v.tipo === "viaje" &&
+    v.estado === "Pendiente" &&
+    v.fecha !== hoy
+  );
+
+  viajesMostrados = [
+    ...registrosDeHoy,
+    ...pendientesDeDiasAnteriores
+  ];
+
   renderListaAgrupada(viajesMostrados);
 
-  const resumen = calcularResumen(aplicarFiltroTipo(viajesMostrados));
+  const resumen = calcularResumen(aplicarFiltroTipo(registrosDeHoy));
   totalSpan.textContent = resumen.total.toFixed(2);
 
-  actualizarResumen(resumen.totalViajes, resumen.pendiente, resumen.totalGastado, 0);
+  actualizarResumen(
+    resumen.totalViajes,
+    resumen.pendiente,
+    resumen.totalGastado,
+    0
+  );
 
-  if (aplicarFiltroTipo(viajesMostrados).length === 0) {
+  if (viajesMostrados.length === 0) {
     lista.innerHTML = '<div class="mensaje-vacio">No hay registros hoy</div>';
   }
 }
