@@ -42,9 +42,15 @@ function capitalizarTexto(texto) {
 
   return texto
     .trim()
-    .split(/\s+/)
-    .filter(p => p !== "")
-    .map((palabra) => palabra.charAt(0).toUpperCase() + palabra.slice(1).toLowerCase())
+    .replace(/\s+/g, " ")
+    .split(" ")
+    .map((palabra) => {
+      if (palabra === palabra.toUpperCase()) {
+        return palabra;
+      }
+
+      return palabra.charAt(0).toUpperCase() + palabra.slice(1).toLowerCase();
+    })
     .join(" ");
 }
 
@@ -700,8 +706,24 @@ inputCantidadViajes.addEventListener("input", actualizarCambioVisual);
 inputPagaCon.addEventListener("input", actualizarCambioVisual);
 tipoRegistro.addEventListener("change", actualizarFormularioSegunTipo);
 inputEstado.addEventListener("change", actualizarCamposPendiente);
-inputCliente.addEventListener("input", actualizarVistaTarjetaNueva);
-inputLugar.addEventListener("input", actualizarVistaTarjetaNueva);
+function ponerPrimeraLetraMayuscula(input) {
+  if (!input.value) return;
+
+  input.value = input.value.replace(
+    /(^|\s)([a-záéíóúüñ])/g,
+    (textoCompleto, espacio, letra) => espacio + letra.toUpperCase()
+  );
+}
+
+inputCliente.addEventListener("input", () => {
+  ponerPrimeraLetraMayuscula(inputCliente);
+  actualizarVistaTarjetaNueva();
+});
+
+inputLugar.addEventListener("input", () => {
+  ponerPrimeraLetraMayuscula(inputLugar);
+  actualizarVistaTarjetaNueva();
+});
 
 function actualizarVisibilidadBusqueda() {
   bloqueFecha.style.display = "none";
